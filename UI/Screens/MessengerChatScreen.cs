@@ -140,7 +140,7 @@ namespace SmartphoneAppMessenger
                 new Rectangle(0, 0, ScaleValue(32), ScaleValue(52)),
                 Game1.mouseCursors,
                 new Rectangle(564, 102, 16, 26),
-                1.6f);
+                1.6f * this.phoneUiScale);
 
             SetupChatInputs();
             var messages = MessageManager.GetMessagesForNpc(this.npcName);
@@ -1143,6 +1143,8 @@ namespace SmartphoneAppMessenger
         public override void update(GameTime time)
         {
             base.update(time);
+
+            this.chatTextBox.Update(time, IsChatInputActive());
 
             this.textCursorBlinkElapsedSeconds += time.ElapsedGameTime.TotalSeconds;
 

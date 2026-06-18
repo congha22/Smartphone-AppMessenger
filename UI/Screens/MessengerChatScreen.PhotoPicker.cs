@@ -67,61 +67,7 @@ namespace SmartphoneAppMessenger
             return new Rectangle(0, 0, viewportWidth, viewportHeight);
         }
 
-        private static string NormalizeSaveFolderName(string saveFolderName)
-        {
-            string normalizedValue = (saveFolderName ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(normalizedValue))
-                return string.Empty;
 
-            char[] invalidChars = Path.GetInvalidFileNameChars();
-            var builder = new System.Text.StringBuilder(normalizedValue.Length);
-            foreach (char character in normalizedValue)
-            {
-                if (character == '/' || character == '\\' || Array.IndexOf(invalidChars, character) >= 0)
-                    continue;
-
-                builder.Append(character);
-            }
-
-            return builder.ToString().Trim();
-        }
-
-        private static string GetActiveSaveFolderName()
-        {
-            string constantsSaveFolder = NormalizeSaveFolderName(Constants.SaveFolderName);
-
-            if (!string.IsNullOrWhiteSpace(constantsSaveFolder))
-            {
-                int underscoreIndex = constantsSaveFolder.IndexOf('_');
-                if (underscoreIndex != -1)
-                {
-                    return constantsSaveFolder.Substring(underscoreIndex);
-                }
-            }
-
-            long uniqueId = 0;
-            if (Context.IsWorldReady && Context.IsMultiplayer && Game1.MasterPlayer != null)
-                uniqueId = Game1.MasterPlayer.UniqueMultiplayerID;
-            else if (Context.IsWorldReady && Game1.player != null)
-                uniqueId = Game1.player.UniqueMultiplayerID;
-
-            if (uniqueId > 0)
-                return $"_{uniqueId}";
-
-            if (!string.IsNullOrWhiteSpace(constantsSaveFolder))
-            {
-                int lastUnderscore = constantsSaveFolder.LastIndexOf('_');
-                if (lastUnderscore >= 0 && lastUnderscore < constantsSaveFolder.Length - 1)
-                {
-                    string possibleId = constantsSaveFolder.Substring(lastUnderscore + 1);
-                    if (long.TryParse(possibleId, out _))
-                        return $"_{possibleId}";
-                }
-                return constantsSaveFolder;
-            }
-
-            return "default";
-        }
 
         private static string GetPhotoTag(string photoPath)
         {
@@ -245,7 +191,7 @@ namespace SmartphoneAppMessenger
             if (iSmartphoneApi != null)
             {
                 string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
-                string activeSave = GetActiveSaveFolderName();
+                string activeSave = MessageManager.GetActiveSaveFolderName();
                 string photoPlayerDir = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player");
 
                 var names = iSmartphoneApi.GetPlayerPhotoNames();
@@ -610,7 +556,7 @@ namespace SmartphoneAppMessenger
             if (!Path.IsPathRooted(resolvedPath))
             {
                 string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
-                string activeSave = GetActiveSaveFolderName();
+                string activeSave = MessageManager.GetActiveSaveFolderName();
                 string playerPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player", resolvedPath);
                 string npcPath = Path.Combine(smartphoneDir, "userdata", activeSave, "shared_photo", resolvedPath);
 
@@ -624,7 +570,7 @@ namespace SmartphoneAppMessenger
             {
                 string fileName = Path.GetFileName(resolvedPath);
                 string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
-                string activeSave = GetActiveSaveFolderName();
+                string activeSave = MessageManager.GetActiveSaveFolderName();
                 string playerPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player", fileName);
                 string npcPath = Path.Combine(smartphoneDir, "userdata", activeSave, "shared_photo", fileName);
 
@@ -787,6 +733,9 @@ namespace SmartphoneAppMessenger
 
         private void DrawChatPhotoHoverTooltips(SpriteBatch b)
         {
+            if (ModEntry.Config == null || !ModEntry.Config.ShowMessageImageTags)
+                return;
+
             if (this.chatPhotoPickerOpen || this.chatPhotoHoverEntries.Count == 0)
                 return;
 

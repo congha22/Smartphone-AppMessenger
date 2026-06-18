@@ -636,7 +636,8 @@ namespace SmartphoneAppMessenger
                 else if (this.profileDescriptionFieldBounds.Contains(x, y))
                 {
                     this.activeProfileField = ProfileField.AboutMe;
-                    this.aboutMeTextBox.SetCursorFromClick(x, this.profileDescriptionFieldBounds, this.phoneUiScale);
+                    this.aboutMeTextBox.CursorIndex = (this.aboutMeTextBox.Text ?? "").Length;
+                    this.aboutMeTextBox.SelectionAnchorIndex = this.aboutMeTextBox.CursorIndex;
                     Game1.playSound("smallSelect");
                 }
                 else if (this.profileSeasonButtonBounds.Contains(x, y))
@@ -869,6 +870,12 @@ namespace SmartphoneAppMessenger
         public override void update(GameTime time)
         {
             base.update(time);
+
+            this.filterTextBox.Update(time, this.Selected && this.currentState == ScreenState.NpcList);
+            this.ageTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.Age);
+            this.birthdayTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.Birthday);
+            this.aboutMeTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.AboutMe);
+
             UpdateAndroidKeyboard();
 
             // Always enforce keyboard focus for typing

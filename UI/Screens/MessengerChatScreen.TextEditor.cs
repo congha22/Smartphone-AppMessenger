@@ -37,7 +37,15 @@ namespace SmartphoneAppMessenger
                 owner.TryApplyComposedTextInput(text);
             }
 
-            public void RecieveCommandInput(char command) { }
+            public void RecieveCommandInput(char command)
+            {
+                if (!Selected) return;
+                if (command == '\b')
+                {
+                    owner.chatTextBox.RecieveBackspace();
+                    ModEntry.RegisterTextInputActivity(owner.npcName);
+                }
+            }
             public void RecieveSpecialInput(Keys key) { }
         }
 

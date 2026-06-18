@@ -11,29 +11,6 @@ using TextCopy;
 
 namespace SmartphoneAppMessenger
 {
-    public static class KeyboardManager
-    {
-        public static bool IsTextInputActive(IClickableMenu menu)
-        {
-            if (menu is MessengerAppScreen appScreen)
-            {
-                if (appScreen.CurrentState == MessengerAppScreen.ScreenState.NpcList)
-                {
-                    return appScreen.Selected;
-                }
-                else if (appScreen.CurrentState == MessengerAppScreen.ScreenState.ProfileEditor)
-                {
-                    return appScreen.IsAnyProfileFieldActive();
-                }
-            }
-            else if (menu is MessengerChatScreen chatScreen)
-            {
-                return chatScreen.IsChatInputActive();
-            }
-            return false;
-        }
-    }
-
     public class EditableTextBox
     {
         public string Text = "";
@@ -510,6 +487,51 @@ namespace SmartphoneAppMessenger
             string visibleText = safeText.Substring(startIndex, endIndex - startIndex);
             int cursorOffset = MeasureTextSubstringWidth(font, safeText, startIndex, cursorIndex - startIndex);
             return (visibleText, startIndex, cursorOffset);
+        }
+
+        private Keys lastHeldKey = Keys.None;
+        private double heldKeyTime = 0;
+        private double lastRepeatTime = 0;
+
+        public void Update(GameTime time, bool isFocused)
+        {
+            if (!isFocused)
+            {
+                lastHeldKey = Keys.None;
+                return;
+            }
+
+            KeyboardState state = Keyboard.GetState();
+            Keys currentKey = Keys.None;
+            if (state.IsKeyDown(Keys.Left)) currentKey = Keys.Left;
+            else if (state.IsKeyDown(Keys.Right)) currentKey = Keys.Right;
+            else if (state.IsKeyDown(Keys.Delete)) currentKey = Keys.Delete;
+
+            if (currentKey == Keys.None)
+            {
+                lastHeldKey = Keys.None;
+                return;
+            }
+
+            if (currentKey != lastHeldKey)
+            {
+                lastHeldKey = currentKey;
+                heldKeyTime = 0;
+                lastRepeatTime = 0;
+            }
+            else
+            {
+                heldKeyTime += time.ElapsedGameTime.TotalMilliseconds;
+                if (heldKeyTime >= 500)
+                {
+                    double sinceLastRepeat = heldKeyTime - lastRepeatTime;
+                    if (sinceLastRepeat >= 50)
+                    {
+                        HandleKeyPress(currentKey);
+                        lastRepeatTime = heldKeyTime;
+                    }
+                }
+            }
         }
     }
 }
