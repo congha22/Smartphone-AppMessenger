@@ -1,0 +1,15 @@
+{
+  "Name": "Smartphone App Messenger",
+  "Author": "d5a1lamdtd",
+  "Version": "1.0",
+  "Description": "Messenger app for Smartphone.",
+  "UniqueID": "d5a1lamdtd.Smartphone-AppMessenger",
+  "EntryDll": "Smartphone-AppMessenger.dll",
+  "MinimumApiVersion": "4.0.0",
+  "Dependencies": [
+    {
+      "UniqueID": "d5a1lamdtd.Smartphone",
+      "IsRequired": true
+    }
+  ]
+}

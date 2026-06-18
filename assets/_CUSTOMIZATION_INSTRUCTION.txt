@@ -1,0 +1,158 @@
+ASSETS CUSTOMIZATION GUIDE (EASY VERSION)
+
+You can customize all files in this folder.
+You can add, edit, or remove entries to match your own play style.
+
+What this changes for you:
+- NPC photos in StardewSocial can appear in more places.
+- NPC chat and social posts can feel more accurate to how you want each NPC to act.
+
+
+========================================
+1) FILES IN THIS FOLDER
+========================================
+
+area_indoor.json
+area_outdoor.json
+- These files control where NPC photos can be generated.
+- If you add more areas, you get more photo variety.
+- This 2 file are quite complex to edit.
+
+npc_characteristics_minimal.json
+npc_characteristics_short.json
+npc_characteristics_long.json
+- These files describe NPC personality and speaking style.
+- The game uses this text when AI generates chat and social content.
+- Very easy to edit.
+-
+
+
+========================================
+2) BEFORE YOU EDIT
+========================================
+
+1. Make a backup copy of any file before editing.
+2. Change are reload when you Load the Save file. Which mean you can exit to main menu and reenter to update.
+3. Keep JSON format valid:
+     - Keep quotes "..."
+     - Keep commas between entries
+     - Keep opening/closing braces { }
+
+
+========================================
+3) EDITING area_indoor.json / area_outdoor.json
+========================================
+
+Purpose:
+- Controls where NPC photos are taken.
+
+Benefits of editing:
+- More visual variety in StardewSocial posts.
+- Better themed photos (beach, forest, home, etc.).
+- You can tune the vibe of each location.
+
+How the structure works:
+- First level = map/location name (example: Town, Beach, HaleyHouse). This must match with the Location Name.
+- Second level = area name (example: TownSquare, LivingRoom). This can be anything, but make it meaningingful.
+- Inside each area, these fields are used:
+
+Required fields:
+- startX, startY, endX, endY (numbers): This is the area that the NPC may spawn. It can contain invalid area (water). However try not to include tile that are wall when indoor.
+
+Recommended field:
+- description (short plain text): Describe what can be see in the area. Leave empty if the title already self-describe the location or nothing realy stand out.
+
+Optional field:
+- ownerNpc (list of NPC names): Name of the NPC that suppose to own that area (bedroom). Leave empty if you think it is a public area.
+
+Example area entry:
+{
+    "Town": {
+        "EmilyPicnicSpot": {
+            "startX": 40,
+            "startY": 76,
+            "endX": 46,
+            "endY": 80,
+            "description": "benches, flowers, picnic blanket",
+            "ownerNpc": ["Emily"]
+        }
+    },
+    "Mod1_Location": {
+        "Beach": {
+            "startX": 40,
+            "startY": 76,
+            "endX": 46,
+            "endY": 80,
+            "description": "picnic blanket, beach, sand-castle",
+            "ownerNpc": []
+        }
+    }
+}
+
+Example with ownerNpc:
+"ownerNpc": ["Haley", "Emily"]
+
+Simple tips:
+- Use a clear description (this helps image tags/context quality).
+- Keep area size reasonable (very tiny areas may fail to place NPCs).
+- ownerNpc is optional; owner NPC will always appear in the photo as the `host` are inviting `guest` over.
+
+
+========================================
+4) EDITING npc_characteristics_*.json
+========================================
+
+Purpose:
+- Controls the personality for each NPC so the AI understand how to roleplay as that NPC.
+
+Benefits of editing:
+- The AI know who that NPC is, especially if thay NPC is new or not popular.
+- NPC replies feel closer to your preferred style.
+- Better consistency in NPC tone and behavior.
+- Great for modded NPCs or custom roleplay flavor.
+
+How entries work:
+- Key = NPC internal name (must match exactly, not Display Name).
+- Value = personality summary sentence/paragraph.
+
+Example:
+"Abigail": "Young goth gamer woman, sarcastic but warm, adventurous, values freedom and mystery."
+
+Important:
+- NPC name key must be exact (including modded IDs).
+- If a key does not match, that NPC will not use your custom text.
+
+Difference between files:
+- minimal: shortest version (quick/compact fallback), max length of 400 characters
+- short: balanced detail (good default choice), max length of 800 characters
+- long: most detail, max length of 1500 characters
+
+If you only want one file to maintain, edit short first.
+
+
+========================================
+5) SAFE EDIT WORKFLOW
+========================================
+
+1. Backup file.
+2. Copy an existing entry and edit it (easiest, safest).
+3. Save file.
+4. Reload save.
+5. Test in game:
+     - For area files: not easy way to test it since it totally random, but you can remove all other entry which force them to use the one to test
+     - For NPC files: chat with that NPC and check tone
+
+
+========================================
+6) QUICK TROUBLESHOOTING
+========================================
+
+If changes do not show:
+- Make sure you reloaded the save.
+- Check JSON commas/braces/quotes.
+- Check NPC key name spelling exactly.
+
+If something breaks after edit:
+- Restore from your backup file.
+- Re-apply changes one small step at a time.
+

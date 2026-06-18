@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>annotations</Nullable>
+    <EnableHarmony>true</EnableHarmony>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GeneratedSecretsFile>$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\Generated\EmbeddedAiSecrets.g.cs</GeneratedSecretsFile>
+    <GeneratedSecretsFileFullPath>$(MSBuildProjectDirectory)\$(GeneratedSecretsFile)</GeneratedSecretsFileFullPath>
+  </PropertyGroup>
+
+  <Target Name="GenerateEmbeddedAiSecrets" BeforeTargets="CoreCompile">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build\GenerateEmbeddedAiSecrets.ps1&quot; -EnvFile &quot;$(MSBuildProjectDirectory)\.env&quot; -OutputFile &quot;$(GeneratedSecretsFileFullPath)&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <Compile Include="$(GeneratedSecretsFile)" Visible="false" AutoGen="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.4.0" />
+    <PackageReference Include="TextCopy" Version="6.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

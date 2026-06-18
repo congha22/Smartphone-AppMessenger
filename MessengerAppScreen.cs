@@ -1,0 +1,1040 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using Smartphone;
+using StardewModdingAPI;
+using StardewValley;
+using StardewValley.Menus;
+using TextCopy;
+
+namespace SmartphoneAppMessenger
+{
+    public partial class MessengerAppScreen : IClickableMenu, IKeyboardSubscriber
+    {
+        private readonly ISmartPhoneApi smartphoneApi;
+        private readonly Action onBack;
+
+        // Layout bounds
+        private readonly int phoneFrameWidth;
+        private readonly int phoneFrameHeight;
+        private readonly int phoneContentOffsetX;
+        private readonly int phoneContentOffsetY;
+        private readonly float phoneUiScale;
+
+        private readonly Texture2D? phoneFrameTexture;
+        private readonly Texture2D? phoneBackgroundTexture;
+
+        private readonly int contentWidth;
+        private readonly int contentHeight;
+
+        // Content
+        private List<string> npcNames = new();
+
+        // Drag State
+        private bool isDragging;
+        private int dragOffsetX;
+        private int dragOffsetY;
+
+        // Scroll State
+        private int scrollOffset;
+        private int maxScroll;
+        private bool isScrolling;
+        private int lastScrollMouseY;
+        private int touchScrollStartY;
+        private bool hasTouchScrolled;
+
+        // Hover State
+        private string? hoveredNpcName;
+        private Dictionary<string, Rectangle> npcItemBounds = new();
+
+        // Search Textbox state
+        private EditableTextBox filterTextBox = new();
+        private Task<string>? pendingKeyboardTask;
+
+        // Sort delay state
+        private bool isSortPending;
+        private float sortDelayTimer;
+
+        // IKeyboardSubscriber Implementation
+        public bool Selected { get; set; }
+
+        // State Machine
+        public enum ScreenState { NpcList, ProfileEditor, AvatarPicker }
+        private ScreenState currentState = ScreenState.NpcList;
+        public ScreenState CurrentState => this.currentState;
+
+        // Profile Editor State
+        public enum ProfileField { None, Age, Birthday, AboutMe }
+        private ProfileField activeProfileField = ProfileField.None;
+
+        private EditableTextBox ageTextBox = new();
+        private EditableTextBox birthdayTextBox = new() { IsNumericOnly = true, MinNumericValue = 1, MaxNumericValue = 28 };
+        private string birthdaySeason = "Spring";
+        private EditableTextBox aboutMeTextBox = new() { IsMultiline = true };
+        private string avatarDraft = "";
+
+        // Profile Editor Bounds
+        private Rectangle profileAvatarCameraButtonBounds;
+        private Rectangle profileAgeFieldBounds;
+        private Rectangle profileBirthdayFieldBounds;
+        private Rectangle profileSeasonButtonBounds;
+        private Rectangle profileDescriptionFieldBounds;
+        private Rectangle profileOkButtonBounds;
+        private Rectangle profileAvatarBounds;
+
+        // Avatar Picker State
+        private readonly List<string> avatarPhotoCandidates = new();
+        private int avatarPhotoCandidateIndex = -1;
+        private string? avatarSelectedPhotoPath;
+
+        // Avatar Picker Bounds
+        private Rectangle avatarPickerPrevBounds;
+        private Rectangle avatarPickerNextBounds;
+        private Rectangle avatarPickerToggleBounds;
+        private Rectangle avatarPickerCancelBounds;
+        private Rectangle avatarPickerOkBounds;
+
+        // Image Cache for Player Avatar
+        private readonly Dictionary<string, Texture2D> avatarImageCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> avatarFailedImagePaths = new(StringComparer.OrdinalIgnoreCase);
+
+        public MessengerAppScreen(ISmartPhoneApi api, Action onBack)
+            : base()
+        {
+            this.smartphoneApi = api;
+            this.onBack = onBack;
+
+            // Get phone position
+            var (px, py) = api.GetPhonePosition();
+            this.xPositionOnScreen = px;
+            this.yPositionOnScreen = py;
+
+            this.phoneFrameWidth = api.GetPhoneFrameWidth();
+            this.phoneFrameHeight = api.GetPhoneFrameHeight();
+            var (offX, offY) = api.GetPhoneContentOffset();
+            this.phoneContentOffsetX = offX;
+            this.phoneContentOffsetY = offY;
+            this.phoneUiScale = api.GetPhoneUiScale();
+            this.phoneFrameTexture = api.GetPhoneFrameTexture();
+            this.phoneBackgroundTexture = api.GetPhoneBackgroundTexture();
+
+            this.width = this.phoneFrameWidth;
+            this.height = this.phoneFrameHeight;
+
+            if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+            {
+                this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
+                this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
+            }
+            else
+            {
+                this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+            }
+
+            // Always select and focus search box
+            this.Selected = true;
+            Game1.keyboardDispatcher.Subscriber = this;
+
+            CalculateLayout(rebuildList: true);
+        }
+
+        private int ScaleValue(int baseValue)
+        {
+            return (int)Math.Round(baseValue * this.phoneUiScale);
+        }
+
+        private Rectangle GetFrameBounds()
+        {
+            return new Rectangle(this.xPositionOnScreen, this.yPositionOnScreen, this.phoneFrameWidth, this.phoneFrameHeight);
+        }
+
+        private Rectangle GetContentBounds()
+        {
+            return new Rectangle(
+                this.xPositionOnScreen + this.phoneContentOffsetX,
+                this.yPositionOnScreen + this.phoneContentOffsetY,
+                this.contentWidth,
+                this.contentHeight);
+        }
+
+        private Rectangle GetSearchBoxBounds()
+        {
+            Rectangle content = GetContentBounds();
+            int fontHeight = (int)Game1.smallFont.MeasureString("A").Y;
+            int height = (int)(fontHeight * this.phoneUiScale) + ScaleValue(30);
+            int buttonWidth = height; // Book button is square (height x height)
+            int gap = ScaleValue(15);
+
+            // Reduced width search box (20% smaller than totalAvailableWidth * 0.85f)
+
+            int totalAvailableWidth = content.Width - ScaleValue(40) - buttonWidth;
+            int searchWidth = (int)(totalAvailableWidth * 0.85f * 0.8f);
+
+            // Center both together horizontally in the content area
+
+            int totalWidth = searchWidth + gap + buttonWidth;
+            int startX = content.X + (content.Width - totalWidth) / 2;
+
+            return new Rectangle(
+                startX,
+                content.Bottom - height - ScaleValue(15),
+                searchWidth,
+                height);
+        }
+
+        private Rectangle GetBookButtonBounds()
+        {
+            Rectangle searchBox = GetSearchBoxBounds();
+            int gap = ScaleValue(15);
+            return new Rectangle(
+                searchBox.Right + gap,
+                searchBox.Y,
+                searchBox.Height,
+                searchBox.Height);
+        }
+
+        private void CalculateLayout(bool rebuildList = true)
+        {
+            Rectangle content = GetContentBounds();
+
+            this.npcItemBounds.Clear();
+
+            if (rebuildList)
+            {
+                // 1. Get and filter NPC list
+                var allNpcNames = MessageManager.GetAvailableNpcNames();
+                var filteredNpcs = allNpcNames;
+
+                if (!string.IsNullOrWhiteSpace(this.filterTextBox.Text))
+                {
+                    filteredNpcs = filteredNpcs
+                        .Where(name =>
+                        {
+                            NPC? npc = Game1.getCharacterFromName(name);
+                            string displayName = npc?.displayName ?? name;
+                            return displayName.Contains(this.filterTextBox.Text, StringComparison.OrdinalIgnoreCase)
+                                || name.Contains(this.filterTextBox.Text, StringComparison.OrdinalIgnoreCase);
+                        })
+                        .ToList();
+                }
+
+                // 2. Sort by: Favourited first, then latest message time, then display name
+                this.npcNames = filteredNpcs
+                    .OrderByDescending(name => MessageManager.FavouriteNpcs.Contains(name) ? 1 : 0)
+                    .ThenByDescending(name => MessageManager.LatestMessageTimestamps.TryGetValue(name, out int ts) ? ts : 0)
+                    .ThenBy(name =>
+                    {
+                        NPC? npc = Game1.getCharacterFromName(name);
+                        return npc?.displayName ?? name;
+                    })
+                    .ToList();
+            }
+
+            // 3. Lay out NPC item slots with 25% extra height and gap
+            int itemHeight = (int)Math.Round(ScaleValue(80) * 1.25f);
+            int currentY = ScaleValue(15); // Tripled top padding (was 5)
+            int gap = ScaleValue(2); // Reduced gap between items (was 5)
+
+            foreach (var npcName in this.npcNames)
+            {
+                this.npcItemBounds[npcName] = new Rectangle(
+                    content.X,
+                    currentY, // Local Y offset
+                    this.contentWidth,
+                    itemHeight);
+
+                currentY += itemHeight + gap;
+            }
+
+            // Calculate max scrollable height (with tripled bottom padding)
+            int totalHeight = currentY - gap + ScaleValue(15);
+            Rectangle contentRect = GetContentBounds();
+            Rectangle searchBox = GetSearchBoxBounds();
+            int searchBoxAreaHeight = searchBox.Height + ScaleValue(25);
+            int listClipHeight = contentRect.Height - searchBoxAreaHeight;
+
+            this.maxScroll = Math.Max(0, totalHeight - listClipHeight);
+            this.scrollOffset = Math.Clamp(this.scrollOffset, 0, this.maxScroll);
+        }
+
+        public override void draw(SpriteBatch b)
+        {
+            // Dim background
+            b.Draw(Game1.staminaRect, new Rectangle(0, 0, Game1.uiViewport.Width, Game1.uiViewport.Height), Color.Black * 0.6f);
+
+            Rectangle contentRect = GetContentBounds();
+            Rectangle frameRect = GetFrameBounds();
+
+            // Draw phone background
+            if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+            {
+                b.Draw(this.phoneBackgroundTexture, contentRect, Color.White);
+            }
+            else
+            {
+                b.Draw(Game1.staminaRect, contentRect, new Color(30, 30, 30));
+            }
+
+            if (this.currentState == ScreenState.ProfileEditor)
+            {
+                DrawProfileEditor(b);
+            }
+            else if (this.currentState == ScreenState.AvatarPicker)
+            {
+                DrawAvatarPicker(b);
+            }
+            else
+            {
+                // Draw Search box and book button at the bottom (unclipped)
+                DrawSearchArea(b);
+
+                // Scissor rect to clip scrollable list above the search box area
+                Rectangle searchBox = GetSearchBoxBounds();
+                int searchBoxAreaHeight = searchBox.Height + ScaleValue(25);
+                Rectangle listClipRect = new Rectangle(
+                    contentRect.X,
+                    contentRect.Y + ScaleValue(5),
+                    contentRect.Width,
+                    contentRect.Height - searchBoxAreaHeight);
+
+                b.End();
+                b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, new RasterizerState() { ScissorTestEnable = true });
+                Rectangle previousScissor = Game1.graphics.GraphicsDevice.ScissorRectangle;
+                Game1.graphics.GraphicsDevice.ScissorRectangle = listClipRect;
+
+                DrawScrollableContent(b, contentRect);
+
+                b.End();
+                Game1.graphics.GraphicsDevice.ScissorRectangle = previousScissor;
+                b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            }
+
+            // Draw phone border on top
+            if (this.phoneFrameTexture != null && !this.phoneFrameTexture.IsDisposed)
+            {
+                b.Draw(this.phoneFrameTexture, frameRect, Color.White);
+            }
+
+            drawMouse(b);
+        }
+
+        private void DrawSearchArea(SpriteBatch b)
+        {
+            Rectangle searchBox = GetSearchBoxBounds();
+
+            // Draw textbox background
+            IClickableMenu.drawTextureBox(
+                b,
+                Game1.menuTexture,
+                new Rectangle(0, 256, 60, 60),
+                searchBox.X,
+                searchBox.Y,
+                searchBox.Width,
+                searchBox.Height,
+                Color.White,
+                1f,
+                false);
+
+            // Draw placeholder or typed text
+            if (string.IsNullOrEmpty(this.filterTextBox.Text))
+            {
+                string textToDraw = "Search...";
+                Color textColor = Color.Gray;
+                SpriteFont font = Game1.smallFont;
+                float textScale = 0.8f * this.phoneUiScale;
+                Vector2 textSize = font.MeasureString(textToDraw) * textScale;
+                Vector2 textPos = new Vector2(
+                    searchBox.X + ScaleValue(17),
+                    searchBox.Y + (searchBox.Height - textSize.Y) / 2f);
+
+                b.DrawString(font, textToDraw, textPos, textColor, 0f, Vector2.Zero, textScale, SpriteEffects.None, 1f);
+            }
+            else
+            {
+                // Draw EditableTextBox
+                this.filterTextBox.Draw(b, searchBox, 1f * this.phoneUiScale, this.Selected);
+            }
+
+            // Draw book button next to search box
+            Rectangle bookBounds = GetBookButtonBounds();
+            b.Draw(
+                Game1.mouseCursors_1_6,
+                bookBounds,
+                new Rectangle(1, 277, 19, 19),
+                Color.White);
+        }
+
+        private void DrawScrollableContent(SpriteBatch b, Rectangle contentRect)
+        {
+            SpriteFont font = Game1.dialogueFont;
+            Rectangle searchBox = GetSearchBoxBounds();
+            int searchBoxAreaHeight = searchBox.Height + ScaleValue(25);
+            Rectangle listClipRect = new Rectangle(
+                contentRect.X,
+                contentRect.Y + ScaleValue(5),
+                contentRect.Width,
+                contentRect.Height - searchBoxAreaHeight);
+
+            foreach (var kvp in this.npcItemBounds)
+            {
+                string npcName = kvp.Key;
+                Rectangle localBounds = kvp.Value;
+
+                // Adjust bounds by content rect and scroll offset
+                Rectangle actualBounds = new Rectangle(
+                    localBounds.X,
+                    contentRect.Y - this.scrollOffset + localBounds.Y,
+                    localBounds.Width,
+                    localBounds.Height);
+
+                // Only draw if within list clip bounds
+                if (actualBounds.Bottom < listClipRect.Top || actualBounds.Top > listClipRect.Bottom)
+                    continue;
+
+                // Centered portrait dimensions (20% bigger than previous 72 & 56)
+                int bgSize = ScaleValue(86);
+                int portraitSize = ScaleValue(67);
+                int portraitXOffset = ScaleValue(50); // Move portrait to the right a little more
+
+                // Draw portrait background box
+                Rectangle bgDest = new Rectangle(
+                    actualBounds.X + portraitXOffset,
+                    actualBounds.Y + (actualBounds.Height - bgSize) / 2,
+                    bgSize,
+                    bgSize);
+
+                if (ModEntry.PortraitBackgroundTexture != null)
+                {
+                    b.Draw(ModEntry.PortraitBackgroundTexture, bgDest, Color.White);
+                }
+
+                // Draw NPC portrait
+                NPC? npc = Game1.getCharacterFromName(npcName);
+                if (npc != null)
+                {
+                    Rectangle portraitDest = new Rectangle(
+                        bgDest.X + (bgSize - portraitSize) / 2,
+                        bgDest.Y + (bgSize - portraitSize) / 2,
+                        portraitSize,
+                        portraitSize);
+
+                    try
+                    {
+                        b.Draw(npc.Portrait, portraitDest, new Rectangle(0, 0, 64, 64), Color.White);
+                    }
+                    catch
+                    {
+                        b.Draw(Game1.staminaRect, portraitDest, Color.Gray);
+                    }
+                }
+
+                // Draw unread counts on the left of portrait in Stardew-style digits (increased size 20%)
+                if (MessageManager.UnreadCounts.TryGetValue(npcName, out int unreadCount) && unreadCount > 0)
+                {
+                    string numberStr = Math.Min(unreadCount, 9).ToString();
+                    int digitWidth = 8;
+                    int digitHeight = 8;
+                    int digitsPerRow = 6;
+
+                    // Centered vertically to the left of the portrait
+                    int numberSize = ScaleValue(38); // 20% larger than 32
+                    int numberX = actualBounds.X + ScaleValue(12);
+                    int numberY = actualBounds.Y + (actualBounds.Height - numberSize) / 2;
+
+                    foreach (char c in numberStr)
+                    {
+                        if (char.IsDigit(c))
+                        {
+                            int digit = c - '0';
+                            int row = digit / digitsPerRow;
+                            int col = digit % digitsPerRow;
+
+                            Rectangle digitSource = new Rectangle(
+                                512 + col * digitWidth,
+                                128 + row * digitHeight,
+                                digitWidth,
+                                digitHeight);
+
+                            b.Draw(
+                                Game1.mouseCursors,
+                                new Rectangle(numberX, numberY, numberSize, numberSize),
+                                digitSource,
+                                Color.White);
+                        }
+                    }
+                }
+
+                // Draw NPC display name (scale increased by 15% to 0.9775f, shadow removed)
+                string displayName = npc?.displayName ?? npcName;
+                float textScale = 0.85f * 1.15f * this.phoneUiScale;
+                Vector2 textSize = font.MeasureString(displayName) * textScale;
+                Vector2 textPos = new Vector2(bgDest.Right + ScaleValue(18), actualBounds.Center.Y - (textSize.Y / 2f));
+
+                b.DrawString(font, displayName, textPos, Color.Black, 0f, Vector2.Zero, textScale, SpriteEffects.None, 1f);
+
+                // Draw action buttons (reduced by 10%: size 31)
+                int buttonSize = ScaleValue(31);
+                int buttonY = actualBounds.Center.Y - (buttonSize / 2);
+
+                int profileButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
+                Rectangle profileButtonBounds = new Rectangle(profileButtonX, buttonY, buttonSize, buttonSize);
+
+                int heartButtonX = profileButtonX - ScaleValue(8) - buttonSize;
+                Rectangle heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+
+                // Heart Button
+                bool isFavourited = MessageManager.FavouriteNpcs.Contains(npcName);
+                Rectangle heartSource = isFavourited ? new Rectangle(211, 428, 7, 7) : new Rectangle(218, 428, 7, 7);
+                b.Draw(Game1.mouseCursors, heartButtonBounds, heartSource, Color.White);
+
+                // Profile Button (dummy magnifier glass directly drawn, no background)
+                b.Draw(Game1.mouseCursors, profileButtonBounds, new Rectangle(80, 0, 13, 13), Color.White);
+            }
+        }
+
+        public override void performHoverAction(int x, int y)
+        {
+            base.performHoverAction(x, y);
+
+            if (this.currentState != ScreenState.NpcList)
+            {
+                this.hoveredNpcName = null;
+                return;
+            }
+
+            Rectangle contentRect = GetContentBounds();
+            this.hoveredNpcName = null;
+
+            Rectangle searchBox = GetSearchBoxBounds();
+            int searchBoxAreaHeight = searchBox.Height + ScaleValue(25);
+            Rectangle listClipRect = new Rectangle(
+                contentRect.X,
+                contentRect.Y,
+                contentRect.Width,
+                contentRect.Height - searchBoxAreaHeight);
+
+            if (listClipRect.Contains(x, y))
+            {
+                foreach (var kvp in this.npcItemBounds)
+                {
+                    Rectangle localBounds = kvp.Value;
+                    Rectangle actualBounds = new Rectangle(
+                        localBounds.X,
+                        contentRect.Y - this.scrollOffset + localBounds.Y,
+                        localBounds.Width,
+                        localBounds.Height);
+
+                    if (actualBounds.Contains(x, y))
+                    {
+                        this.hoveredNpcName = kvp.Key;
+                        break;
+                    }
+                }
+            }
+        }
+
+        public bool IsAnyProfileFieldActive()
+        {
+            return this.currentState == ScreenState.ProfileEditor && this.activeProfileField != ProfileField.None;
+        }
+
+        private void NavigateBack()
+        {
+            if (this.currentState == ScreenState.AvatarPicker)
+            {
+                this.currentState = ScreenState.ProfileEditor;
+                Game1.playSound("bigDeSelect");
+            }
+            else if (this.currentState == ScreenState.ProfileEditor)
+            {
+                this.currentState = ScreenState.NpcList;
+                Game1.playSound("bigDeSelect");
+            }
+            else
+            {
+                this.onBack?.Invoke();
+            }
+        }
+
+        public override void receiveKeyPress(Microsoft.Xna.Framework.Input.Keys key)
+        {
+            if (key == Microsoft.Xna.Framework.Input.Keys.Escape)
+            {
+                NavigateBack();
+                return;
+            }
+
+            if (KeyboardManager.IsTextInputActive(this))
+            {
+                if (this.currentState == ScreenState.ProfileEditor)
+                {
+                    TryApplyProfileEditorKey(key);
+                }
+                return;
+            }
+
+            base.receiveKeyPress(key);
+        }
+
+        public override void receiveLeftClick(int x, int y, bool playSound = true)
+        {
+            if (this.smartphoneApi.HandlePhoneAppBottomNavClick(x, y, this.xPositionOnScreen, this.yPositionOnScreen, onBack: NavigateBack))
+            {
+                return;
+            }
+
+            if (this.currentState == ScreenState.NpcList)
+            {
+                // Always select and focus search box when clicking within app content
+                Rectangle contentRect = GetContentBounds();
+                if (contentRect.Contains(x, y))
+                {
+                    this.Selected = true;
+                    Game1.keyboardDispatcher.Subscriber = this;
+
+                    Rectangle searchBox = GetSearchBoxBounds();
+                    if (searchBox.Contains(x, y))
+                    {
+                        if (Constants.TargetPlatform == GamePlatform.Android)
+                        {
+                            TriggerAndroidKeyboard(this.filterTextBox.Text);
+                        }
+                        else
+                        {
+                            this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
+                        }
+                    }
+                }
+
+                this.lastScrollMouseY = y;
+                this.touchScrollStartY = y;
+                this.hasTouchScrolled = false;
+                this.isScrolling = false;
+            }
+            else if (this.currentState == ScreenState.ProfileEditor)
+            {
+                this.activeProfileField = ProfileField.None;
+
+                if (this.profileAgeFieldBounds.Contains(x, y))
+                {
+                    this.activeProfileField = ProfileField.Age;
+                    this.ageTextBox.SetCursorFromClick(x, this.profileAgeFieldBounds, this.phoneUiScale);
+                    Game1.playSound("smallSelect");
+                }
+                else if (this.profileBirthdayFieldBounds.Contains(x, y))
+                {
+                    this.activeProfileField = ProfileField.Birthday;
+                    this.birthdayTextBox.SetCursorFromClick(x, this.profileBirthdayFieldBounds, this.phoneUiScale);
+                    Game1.playSound("smallSelect");
+                }
+                else if (this.profileDescriptionFieldBounds.Contains(x, y))
+                {
+                    this.activeProfileField = ProfileField.AboutMe;
+                    this.aboutMeTextBox.SetCursorFromClick(x, this.profileDescriptionFieldBounds, this.phoneUiScale);
+                    Game1.playSound("smallSelect");
+                }
+                else if (this.profileSeasonButtonBounds.Contains(x, y))
+                {
+                    this.birthdaySeason = this.birthdaySeason switch
+                    {
+                        "Spring" => "Summer",
+                        "Summer" => "Fall",
+                        "Fall" => "Winter",
+                        "Winter" => "Spring",
+                        _ => "Spring"
+                    };
+                    Game1.playSound("shwip");
+                }
+                else if (this.profileAvatarCameraButtonBounds.Contains(x, y))
+                {
+                    this.avatarSelectedPhotoPath = this.avatarDraft;
+                    EnsureAvatarPhotoCandidatesLoaded();
+                    this.currentState = ScreenState.AvatarPicker;
+                    Game1.playSound("smallSelect");
+                }
+                else if (this.profileOkButtonBounds.Contains(x, y))
+                {
+                    SaveProfileData();
+                    this.currentState = ScreenState.NpcList;
+                    Game1.playSound("money");
+                }
+            }
+            else if (this.currentState == ScreenState.AvatarPicker)
+            {
+                if (this.avatarPickerPrevBounds.Contains(x, y))
+                {
+                    this.avatarPhotoCandidateIndex--;
+                    if (this.avatarPhotoCandidateIndex < 0)
+                        this.avatarPhotoCandidateIndex = this.avatarPhotoCandidates.Count - 1;
+                    Game1.playSound("shwip");
+                }
+                else if (this.avatarPickerNextBounds.Contains(x, y))
+                {
+                    this.avatarPhotoCandidateIndex++;
+                    if (this.avatarPhotoCandidateIndex >= this.avatarPhotoCandidates.Count)
+                        this.avatarPhotoCandidateIndex = 0;
+                    Game1.playSound("shwip");
+                }
+                else if (this.avatarPickerToggleBounds.Contains(x, y))
+                {
+                    if (this.avatarPhotoCandidates.Count > 0 && this.avatarPhotoCandidateIndex >= 0)
+                    {
+                        string currentPath = this.avatarPhotoCandidates[this.avatarPhotoCandidateIndex];
+                        if (string.Equals(this.avatarSelectedPhotoPath, currentPath, StringComparison.OrdinalIgnoreCase))
+                            this.avatarSelectedPhotoPath = "";
+                        else
+                            this.avatarSelectedPhotoPath = currentPath;
+                        Game1.playSound("smallSelect");
+                    }
+                }
+                else if (this.avatarPickerCancelBounds.Contains(x, y))
+                {
+                    this.currentState = ScreenState.ProfileEditor;
+                    Game1.playSound("bigDeSelect");
+                }
+                else if (this.avatarPickerOkBounds.Contains(x, y))
+                {
+                    SaveAvatarRightAway(this.avatarSelectedPhotoPath ?? "");
+                    this.currentState = ScreenState.ProfileEditor;
+                    Game1.playSound("smallSelect");
+                }
+            }
+        }
+
+        public override void receiveScrollWheelAction(int direction)
+        {
+            base.receiveScrollWheelAction(direction);
+            if (this.currentState != ScreenState.NpcList)
+                return;
+
+            int scrollAmount = ScaleValue(40);
+            if (direction > 0)
+            {
+                this.scrollOffset -= scrollAmount;
+            }
+            else if (direction < 0)
+            {
+                this.scrollOffset += scrollAmount;
+            }
+            this.scrollOffset = Math.Clamp(this.scrollOffset, 0, this.maxScroll);
+        }
+
+        public override void releaseLeftClick(int x, int y)
+        {
+            base.releaseLeftClick(x, y);
+
+            if (this.currentState == ScreenState.NpcList && !this.hasTouchScrolled)
+            {
+                Rectangle contentRect = GetContentBounds();
+                if (contentRect.Contains(x, y))
+                {
+                    Rectangle searchBox = GetSearchBoxBounds();
+                    Rectangle bookBounds = GetBookButtonBounds();
+
+                    if (searchBox.Contains(x, y))
+                    {
+                        return; // Handled in receiveLeftClick
+                    }
+
+                    if (bookBounds.Contains(x, y))
+                    {
+                        Game1.playSound("smallSelect");
+                        OpenProfileEditor();
+                        return;
+                    }
+
+                    Rectangle sBox = GetSearchBoxBounds();
+                    int searchBoxAreaHeight = sBox.Height + ScaleValue(25);
+                    Rectangle listClipRect = new Rectangle(
+                        contentRect.X,
+                        contentRect.Y,
+                        contentRect.Width,
+                        contentRect.Height - searchBoxAreaHeight);
+
+                    foreach (var kvp in this.npcItemBounds)
+                    {
+                        string npcName = kvp.Key;
+                        Rectangle localBounds = kvp.Value;
+                        Rectangle actualBounds = new Rectangle(
+                            localBounds.X,
+                            contentRect.Y - this.scrollOffset + localBounds.Y,
+                            localBounds.Width,
+                            localBounds.Height);
+
+                        if (actualBounds.Bottom < listClipRect.Top || actualBounds.Top > listClipRect.Bottom)
+                            continue;
+
+                        if (actualBounds.Contains(x, y))
+                        {
+                            int buttonSize = ScaleValue(31);
+                            int buttonY = actualBounds.Center.Y - (buttonSize / 2);
+
+                            int profileButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
+                            Rectangle profileButtonBounds = new Rectangle(profileButtonX, buttonY, buttonSize, buttonSize);
+
+                            int heartButtonX = profileButtonX - ScaleValue(8) - buttonSize;
+                            Rectangle heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+
+                            if (heartButtonBounds.Contains(x, y))
+                            {
+                                Game1.playSound("coin");
+                                if (MessageManager.FavouriteNpcs.Contains(npcName))
+                                {
+                                    MessageManager.FavouriteNpcs.Remove(npcName);
+                                }
+                                else
+                                {
+                                    MessageManager.FavouriteNpcs.Add(npcName);
+                                }
+
+                                // Start 0.5s delay timer before actual list sorting is updated
+                                this.isSortPending = true;
+                                this.sortDelayTimer = 500f;
+                                return;
+                            }
+
+                            if (profileButtonBounds.Contains(x, y))
+                            {
+                                Game1.playSound("smallSelect");
+                                return;
+                            }
+
+                            Game1.playSound("bigSelect");
+
+                            // Open Chat Screen and reset unread count (do not call SaveMetadata immediately)
+                            MessageManager.UnreadCounts[npcName] = 0;
+
+                            Game1.activeClickableMenu = new MessengerChatScreen(
+                                this.smartphoneApi,
+                                npcName,
+                                () =>
+                                {
+                                    MessageManager.UnreadCounts[npcName] = 0;
+                                    Game1.activeClickableMenu = new MessengerAppScreen(this.smartphoneApi, this.onBack);
+                                });
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            this.isDragging = false;
+            this.isScrolling = false;
+        }
+
+        public override void leftClickHeld(int x, int y)
+        {
+            base.leftClickHeld(x, y);
+
+            if (!this.isDragging && !this.isScrolling)
+            {
+                Rectangle frameBounds = GetFrameBounds();
+                Rectangle contentBounds = GetContentBounds();
+
+                if (this.currentState == ScreenState.NpcList && contentBounds.Contains(x, y))
+                {
+                    this.isScrolling = true;
+                    this.lastScrollMouseY = y;
+                }
+                else if (frameBounds.Contains(x, y) && !contentBounds.Contains(x, y))
+                {
+                    this.isDragging = true;
+                    this.dragOffsetX = x - this.xPositionOnScreen;
+                    this.dragOffsetY = y - this.yPositionOnScreen;
+                }
+            }
+
+            if (this.isScrolling)
+            {
+                if (Math.Abs(y - this.touchScrollStartY) > 5)
+                    this.hasTouchScrolled = true;
+
+                int deltaY = y - this.lastScrollMouseY;
+                this.lastScrollMouseY = y;
+                if (deltaY != 0)
+                {
+                    this.scrollOffset -= deltaY;
+                    this.scrollOffset = Math.Clamp(this.scrollOffset, 0, this.maxScroll);
+                }
+            }
+        }
+
+        public override void update(GameTime time)
+        {
+            base.update(time);
+            UpdateAndroidKeyboard();
+
+            // Always enforce keyboard focus for typing
+            if (Game1.keyboardDispatcher.Subscriber != this)
+            {
+                Game1.keyboardDispatcher.Subscriber = this;
+                this.Selected = true;
+            }
+
+            // Handle sorting delay
+            if (this.isSortPending)
+            {
+                this.sortDelayTimer -= (float)time.ElapsedGameTime.TotalMilliseconds;
+                if (this.sortDelayTimer <= 0)
+                {
+                    this.isSortPending = false;
+                    CalculateLayout(rebuildList: true);
+                }
+            }
+
+            if (this.isDragging)
+            {
+                int oldX = this.xPositionOnScreen;
+                int oldY = this.yPositionOnScreen;
+                this.xPositionOnScreen = Game1.getMouseX() - this.dragOffsetX;
+                this.yPositionOnScreen = Game1.getMouseY() - this.dragOffsetY;
+                ClampToViewport();
+                if (this.xPositionOnScreen != oldX || this.yPositionOnScreen != oldY)
+                {
+                    this.smartphoneApi.SetPhonePosition(this.xPositionOnScreen, this.yPositionOnScreen);
+                    CalculateLayout(rebuildList: false);
+                }
+            }
+
+            // Keep phone position synchronized if moved externally
+            var (targetX, targetY) = this.smartphoneApi.GetPhonePosition();
+            if (this.xPositionOnScreen != targetX || this.yPositionOnScreen != targetY)
+            {
+                this.xPositionOnScreen = targetX;
+                this.yPositionOnScreen = targetY;
+                CalculateLayout(rebuildList: false);
+            }
+        }
+
+        private void ClampToViewport()
+        {
+            this.xPositionOnScreen = Math.Max(0, Math.Min(this.xPositionOnScreen, Game1.uiViewport.Width - this.width));
+            this.yPositionOnScreen = Math.Max(0, Math.Min(this.yPositionOnScreen, Game1.uiViewport.Height - this.height));
+        }
+
+        protected override void cleanupBeforeExit()
+        {
+            if (Game1.keyboardDispatcher.Subscriber == this)
+            {
+                Game1.keyboardDispatcher.Subscriber = null;
+            }
+            base.cleanupBeforeExit();
+        }
+
+        // IKeyboardSubscriber Text Input Handling
+        public void RecieveTextInput(char inputChar)
+        {
+            if (!Selected) return;
+
+            if (this.currentState == ScreenState.ProfileEditor)
+            {
+                if (!char.IsControl(inputChar))
+                {
+                    ApplyTextInputToActiveField(inputChar.ToString());
+                }
+            }
+            else if (this.currentState == ScreenState.NpcList)
+            {
+                if (!char.IsControl(inputChar))
+                {
+                    this.filterTextBox.RecieveTextInput(inputChar.ToString());
+                    CalculateLayout(rebuildList: true);
+                }
+            }
+        }
+
+        public void RecieveTextInput(string text)
+        {
+            if (!Selected) return;
+
+            if (this.currentState == ScreenState.ProfileEditor)
+            {
+                ApplyTextInputToActiveField(text);
+            }
+            else if (this.currentState == ScreenState.NpcList)
+            {
+                this.filterTextBox.RecieveTextInput(text);
+                CalculateLayout(rebuildList: true);
+            }
+        }
+
+        public void RecieveCommandInput(char command)
+        {
+            if (!Selected) return;
+
+            if (command == '\b') // Backspace
+            {
+                if (this.currentState == ScreenState.ProfileEditor)
+                {
+                    ApplyBackspaceToActiveField();
+                }
+                else if (this.currentState == ScreenState.NpcList)
+                {
+                    this.filterTextBox.RecieveBackspace();
+                    CalculateLayout(rebuildList: true);
+                }
+            }
+        }
+
+        public void RecieveSpecialInput(Keys key)
+        {
+            if (!Selected) return;
+            if (this.currentState == ScreenState.NpcList)
+            {
+                if (this.filterTextBox.HandleKeyPress(key))
+                {
+                    CalculateLayout(rebuildList: true);
+                }
+            }
+        }
+
+        private void TriggerAndroidKeyboard(string currentText)
+        {
+            try
+            {
+                Type? keyboardInputType = typeof(Microsoft.Xna.Framework.Input.Keyboard).Assembly.GetType("Microsoft.Xna.Framework.Input.KeyboardInput");
+                if (keyboardInputType != null)
+                {
+                    var showMethod = keyboardInputType.GetMethod("Show", new[] { typeof(string), typeof(string), typeof(string), typeof(bool) });
+                    if (showMethod != null)
+                    {
+                        this.pendingKeyboardTask = (Task<string>)showMethod.Invoke(null, new object[] { "Filter", "Filter NPC list", currentText, false })!;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                this.pendingKeyboardTask = null;
+            }
+        }
+
+        private void UpdateAndroidKeyboard()
+        {
+            if (this.pendingKeyboardTask != null && this.pendingKeyboardTask.IsCompleted)
+            {
+                if (!this.pendingKeyboardTask.IsFaulted && this.pendingKeyboardTask.Result != null)
+                {
+                    if (this.currentState == ScreenState.ProfileEditor)
+                    {
+                        ApplyTextInputToActiveField(this.pendingKeyboardTask.Result);
+                    }
+                    else if (this.currentState == ScreenState.NpcList)
+                    {
+                        this.filterTextBox.Text = this.pendingKeyboardTask.Result;
+                        this.filterTextBox.CursorIndex = this.filterTextBox.Text.Length;
+                        this.filterTextBox.SelectionAnchorIndex = this.filterTextBox.Text.Length;
+                        CalculateLayout(rebuildList: true);
+                    }
+                }
+                this.pendingKeyboardTask = null;
+            }
+        }
+    }
+}
