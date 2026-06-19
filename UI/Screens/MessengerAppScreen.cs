@@ -100,8 +100,8 @@ namespace SmartphoneAppMessenger
         private Rectangle avatarPickerOkBounds;
 
         // Image Cache for Player Avatar
-        private readonly Dictionary<string, Texture2D> avatarImageCache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> avatarFailedImagePaths = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Texture2D> avatarImageCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> avatarFailedImagePaths = new(StringComparer.OrdinalIgnoreCase);
 
         public MessengerAppScreen(ISmartPhoneApi api, Action onBack)
             : base()
@@ -207,9 +207,21 @@ namespace SmartphoneAppMessenger
 
             if (rebuildList)
             {
-                // 1. Get and filter NPC list
+                // 1. Get and filter contact list (NPCs + online players + players with chat history)
                 var allNpcNames = MessageManager.GetAvailableNpcNames();
-                var filteredNpcs = allNpcNames;
+                var onlinePlayers = Game1.getOnlineFarmers()
+                    .Select(f => f.Name)
+                    .Where(name => !string.Equals(name, Game1.player.Name, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var chatPlayers = MessageManager.PlayerConversations.Keys.ToList();
+
+                var allContacts = allNpcNames
+                    .Concat(onlinePlayers)
+                    .Concat(chatPlayers)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var filteredNpcs = allContacts;
 
                 if (!string.IsNullOrWhiteSpace(this.filterTextBox.Text))
                 {
@@ -414,16 +426,16 @@ namespace SmartphoneAppMessenger
                     b.Draw(ModEntry.PortraitBackgroundTexture, bgDest, Color.White);
                 }
 
-                // Draw NPC portrait
+                // Draw NPC or Player portrait
                 NPC? npc = Game1.getCharacterFromName(npcName);
+                Rectangle portraitDest = new Rectangle(
+                    bgDest.X + (bgSize - portraitSize) / 2,
+                    bgDest.Y + (bgSize - portraitSize) / 2,
+                    portraitSize,
+                    portraitSize);
+
                 if (npc != null)
                 {
-                    Rectangle portraitDest = new Rectangle(
-                        bgDest.X + (bgSize - portraitSize) / 2,
-                        bgDest.Y + (bgSize - portraitSize) / 2,
-                        portraitSize,
-                        portraitSize);
-
                     try
                     {
                         b.Draw(npc.Portrait, portraitDest, new Rectangle(0, 0, 64, 64), Color.White);
@@ -431,6 +443,35 @@ namespace SmartphoneAppMessenger
                     catch
                     {
                         b.Draw(Game1.staminaRect, portraitDest, Color.Gray);
+                    }
+                }
+                else
+                {
+                    if (TryGetContactAvatarTexture(npcName, out Texture2D playerAvatar))
+                    {
+                        b.Draw(playerAvatar, portraitDest, Color.White);
+                    }
+                    else
+                    {
+                        // Draw player initials as fallback inside a nice background box
+                        IClickableMenu.drawTextureBox(
+                            b,
+                            Game1.menuTexture,
+                            new Rectangle(0, 256, 60, 60),
+                            portraitDest.X,
+                            portraitDest.Y,
+                            portraitDest.Width,
+                            portraitDest.Height,
+                            new Color(230, 230, 230, 220),
+                            1f,
+                            false);
+
+                        string initial = string.IsNullOrWhiteSpace(npcName) ? "P" : npcName.Trim()[0].ToString().ToUpperInvariant();
+                        Vector2 initialSize = Game1.smallFont.MeasureString(initial) * this.phoneUiScale;
+                        Vector2 initialPos = new Vector2(
+                            portraitDest.X + (portraitDest.Width - initialSize.X) / 2f,
+                            portraitDest.Y + (portraitDest.Height - initialSize.Y) / 2f);
+                        b.DrawString(Game1.smallFont, initial, initialPos, Color.Gray, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
                     }
                 }
 

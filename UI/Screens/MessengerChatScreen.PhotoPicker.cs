@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
-using StardewModdingAPI;
 
 namespace SmartphoneAppMessenger
 {
@@ -14,9 +14,9 @@ namespace SmartphoneAppMessenger
     {
         // Dimensions & Constants
         private const int ChatPhotoPickerMaxCount = 3;
-        private const int ChatImageMaxWidthBase = 260;
-        private const int ChatImageMaxHeightBase = 240;
-        private const float ChatImageScale = 0.5f;
+        private const int ChatImageMaxWidthBase = 320;
+        private const int ChatImageMaxHeightBase = 300;
+        private const float ChatImageScale = 0.7f;
 
         private int ChatImageMaxWidth => Math.Max(1, ScaleValue(ChatImageMaxWidthBase));
         private int ChatImageMaxHeight => Math.Max(1, ScaleValue(ChatImageMaxHeightBase));
@@ -36,8 +36,21 @@ namespace SmartphoneAppMessenger
         private readonly List<ChatPhotoNavigationEntry> chatPhotoNavigationEntries = new();
         private readonly List<ChatPhotoHoverEntry> chatPhotoHoverEntries = new();
         private readonly Dictionary<string, int> chatPhotoGroupIndices = new();
-        private readonly Dictionary<string, Texture2D> chatImageCache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> chatFailedImagePaths = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Texture2D> chatImageCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> chatFailedImagePaths = new(StringComparer.OrdinalIgnoreCase);
+
+        internal static void ClearChatImageCache()
+        {
+            foreach (var texture in chatImageCache.Values)
+            {
+                if (texture != null && !texture.IsDisposed)
+                {
+                    try { texture.Dispose(); } catch { }
+                }
+            }
+            chatImageCache.Clear();
+            chatFailedImagePaths.Clear();
+        }
 
         // Nested helper types
         private class ChatPhotoNavigationEntry
@@ -163,8 +176,109 @@ namespace SmartphoneAppMessenger
         private void OpenChatPhotoPicker()
         {
             this.isAttachmentMenuOpen = false;
-            EnsureChatPhotoCandidatesLoaded();
-            this.chatPhotoPickerOpen = true;
+
+            bool isPlayer = Game1.getOnlineFarmers().Any(f => string.Equals(f.Name, this.npcName, StringComparison.OrdinalIgnoreCase))
+                            || MessageManager.PlayerConversations.ContainsKey(this.npcName);
+
+            // NPC chat only needs metadata; P2P needs raw textures
+            bool getTexture = isPlayer;
+            bool getMetadata = !isPlayer;
+
+            // Capture local fields for closure
+            var api = this.smartphoneApi;
+            string targetNpc = this.npcName;
+            var backAction = this.onBack;
+
+            // Close current menu so the phone screen displays selection interface
+            Game1.activeClickableMenu = null;
+
+            api.RetrievePhotos(limit: 3, getTexture: getTexture, getMetadata: getMetadata, onComplete: (jsonString) =>
+            {
+                // Reopen the texting screen
+                Game1.activeClickableMenu = new MessengerChatScreen(api, targetNpc, backAction);
+
+                List<SelectedPhotoResult>? results = null;
+                try
+                {
+                    results = string.IsNullOrWhiteSpace(jsonString)
+                        ? null
+                        : Newtonsoft.Json.JsonConvert.DeserializeObject<List<SelectedPhotoResult>>(jsonString);
+                }
+                catch (Exception ex)
+                {
+                    ModEntry.Instance.Monitor.Log($"Failed to deserialize photo results: {ex.Message}", LogLevel.Error);
+                }
+
+                if (results == null || results.Count == 0)
+                {
+                    return;
+                }
+
+                if (isPlayer)
+                {
+                    // P2P: retrieve texture raw bytes, write to shared directory, queue transmission, and send message references
+                    string activeSave = MessageManager.GetActiveSaveFolderName();
+                    string photoSharedDir = Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "userdata", activeSave, "photo_shared");
+                    Directory.CreateDirectory(photoSharedDir);
+
+                    List<string> relativePaths = new List<string>();
+
+                    foreach (var result in results)
+                    {
+                        if (result.TextureData != null)
+                        {
+                            try
+                            {
+                                string extension = Path.GetExtension(result.FileName);
+                                if (string.IsNullOrEmpty(extension)) extension = ".jpg";
+                                string destFileName = Guid.NewGuid().ToString("N") + extension;
+                                string destPath = Path.Combine(photoSharedDir, destFileName);
+                                
+                                File.WriteAllBytes(destPath, result.TextureData);
+
+                                string relativePath = "photo_shared/" + destFileName;
+                                relativePaths.Add(relativePath);
+
+                                TransferManager.QueueSend("Photo", destFileName, destPath, targetNpc);
+                            }
+                            catch (Exception ex)
+                            {
+                                ModEntry.Instance.Monitor.Log($"Failed to write shared photo: {ex.Message}", LogLevel.Error);
+                            }
+                        }
+                    }
+
+                    if (relativePaths.Count > 0)
+                    {
+                        string localPhotoMsg = "PlayerPhoto: " + string.Join("||", relativePaths);
+                        MessageManager.AddPlayerMessage(targetNpc, localPhotoMsg, isFromPlayer: true);
+
+                        string remotePhotoMsg = "NpcPhoto: " + string.Join("||", relativePaths);
+                        TransferManager.SendTextMessage(targetNpc, remotePhotoMsg);
+                    }
+                }
+                else
+                {
+                    // NPC: retrieve metadata and send raw messages with tag references
+                    List<string> absolutePaths = results.Select(r => r.AbsolutePath).ToList();
+                    string photoMsg = "PlayerPhoto: " + string.Join("||", absolutePaths);
+                    MessageManager.AddMessage(targetNpc, photoMsg, type: "raw");
+
+                    List<string> tagList = results.Select(r => r.Tag).Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+                    string tagsCombined = string.Join("; ", tagList);
+                    string tagMsg = "PlayerPhotoTag: " + tagsCombined;
+                    MessageManager.AddMessage(targetNpc, tagMsg, type: "raw");
+
+                    string promptArg = $"[Attached photo tags: {tagsCombined}]";
+                    ModEntry.QueueUserMessage(targetNpc, promptArg);
+                }
+
+                // Force layout update and scroll to bottom
+                if (Game1.activeClickableMenu is MessengerChatScreen chatScreen)
+                {
+                    chatScreen.RebuildChatBubbles();
+                }
+            });
         }
 
         private void CloseChatPhotoPicker(bool clearSelection)
@@ -514,17 +628,17 @@ namespace SmartphoneAppMessenger
 
         private void DrawSocialImageNavButton(SpriteBatch b, Rectangle bounds, bool isNext)
         {
-            IClickableMenu.drawTextureBox(
-                b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
-                bounds.X,
-                bounds.Y,
-                bounds.Width,
-                bounds.Height,
-                new Color(0, 0, 0, 140),
-                1f,
-                false);
+            // IClickableMenu.drawTextureBox(
+            //     b,
+            //     Game1.menuTexture,
+            //     new Rectangle(0, 256, 60, 60),
+            //     bounds.X,
+            //     bounds.Y,
+            //     bounds.Width,
+            //     bounds.Height,
+            //     new Color(0, 0, 0, 140),
+            //     1f,
+            //     false);
 
             Rectangle source = isNext
                 ? Game1.getSourceRectForStandardTileSheet(Game1.mouseCursors, 33)
@@ -532,7 +646,7 @@ namespace SmartphoneAppMessenger
 
             b.Draw(
                 Game1.mouseCursors,
-                new Rectangle(bounds.X + ScaleValue(8), bounds.Y + ScaleValue(8), bounds.Width - ScaleValue(16), bounds.Height - ScaleValue(16)),
+                new Rectangle(bounds.X, bounds.Y, bounds.Width, bounds.Height),
                 source,
                 Color.White);
         }
@@ -544,26 +658,25 @@ namespace SmartphoneAppMessenger
             if (string.IsNullOrWhiteSpace(resolvedPath))
                 return false;
 
-            if (this.chatImageCache.TryGetValue(resolvedPath, out Texture2D? cachedTexture) && cachedTexture != null)
-            {
-                texture = cachedTexture;
-                return true;
-            }
-
-            if (this.chatFailedImagePaths.Contains(resolvedPath))
-                return false;
-
             if (!Path.IsPathRooted(resolvedPath))
             {
-                string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
                 string activeSave = MessageManager.GetActiveSaveFolderName();
-                string playerPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player", resolvedPath);
-                string npcPath = Path.Combine(smartphoneDir, "userdata", activeSave, "shared_photo", resolvedPath);
+                string appSharedPath = Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "userdata", activeSave, "photo_shared", Path.GetFileName(resolvedPath));
+                if (File.Exists(appSharedPath))
+                {
+                    resolvedPath = appSharedPath;
+                }
+                else
+                {
+                    string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
+                    string playerPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player", resolvedPath);
+                    string npcPath = Path.Combine(smartphoneDir, "userdata", activeSave, "shared_photo", resolvedPath);
 
-                if (File.Exists(playerPath))
-                    resolvedPath = playerPath;
-                else if (File.Exists(npcPath))
-                    resolvedPath = npcPath;
+                    if (File.Exists(playerPath))
+                        resolvedPath = playerPath;
+                    else if (File.Exists(npcPath))
+                        resolvedPath = npcPath;
+                }
             }
 
             if (!File.Exists(resolvedPath))
@@ -580,9 +693,18 @@ namespace SmartphoneAppMessenger
                     resolvedPath = npcPath;
             }
 
+            if (chatImageCache.TryGetValue(resolvedPath, out Texture2D? cachedTexture) && cachedTexture != null)
+            {
+                texture = cachedTexture;
+                return true;
+            }
+
+            if (chatFailedImagePaths.Contains(resolvedPath))
+                return false;
+
             if (!File.Exists(resolvedPath))
             {
-                this.chatFailedImagePaths.Add(resolvedPath);
+                chatFailedImagePaths.Add(resolvedPath);
                 return false;
             }
 
@@ -590,13 +712,13 @@ namespace SmartphoneAppMessenger
             {
                 using var stream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 Texture2D loadedTexture = Texture2D.FromStream(Game1.graphics.GraphicsDevice, stream);
-                this.chatImageCache[resolvedPath] = loadedTexture;
+                chatImageCache[resolvedPath] = loadedTexture;
                 texture = loadedTexture;
                 return true;
             }
             catch (Exception)
             {
-                this.chatFailedImagePaths.Add(resolvedPath);
+                chatFailedImagePaths.Add(resolvedPath);
                 return false;
             }
         }

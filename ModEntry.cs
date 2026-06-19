@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 using Smartphone;
 using StardewModdingAPI;
@@ -214,6 +217,11 @@ namespace SmartphoneAppMessenger
             helper.Events.GameLoop.DayEnding += this.OnDayEnding;
             helper.Events.GameLoop.DayStarted += this.OnDayStarted;
             helper.Events.GameLoop.TimeChanged += this.OnTimeChanged;
+
+            // Multiplayer chunked transfer events
+            helper.Events.GameLoop.UpdateTicked += TransferManager.OnUpdateTicked;
+            helper.Events.Multiplayer.ModMessageReceived += TransferManager.OnModMessageReceived;
+            helper.Events.Multiplayer.PeerConnected += TransferManager.OnPeerConnected;
         }
 
         public override object GetApi()
@@ -225,10 +233,24 @@ namespace SmartphoneAppMessenger
         {
             HandleAiModelSettingTimeChanged(e.NewTime);
             HandleAiUsageTimeChanged(e.NewTime);
+            if (Game1.timeOfDay < 2200)
+            {
+                CheckSendNewMessage();
+            }
         }
 
         private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
         {
+            try
+            {
+                MessengerChatScreen.ClearChatImageCache();
+                MessengerAppScreen.ClearAvatarCache();
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Error clearing photo caches: {ex.Message}", LogLevel.Warn);
+            }
+
             string summaryPath = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName(), "npc_conversation_summary.json");
             npcConversationSummary = this.Helper.Data.ReadJsonFile<Dictionary<string, string>>(summaryPath)
                 ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -330,6 +352,15 @@ namespace SmartphoneAppMessenger
         private void OnDayStarted(object? sender, DayStartedEventArgs e)
         {
             lastTimeReceiveMessage = 600;
+            try
+            {
+                MessengerChatScreen.ClearChatImageCache();
+                MessengerAppScreen.ClearAvatarCache();
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Error clearing photo caches: {ex.Message}", LogLevel.Warn);
+            }
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -378,7 +409,17 @@ namespace SmartphoneAppMessenger
                 sortOrder: 1, // Sort order
                 sourceRect: null,
                 isVisible: () => Context.IsWorldReady,
-                getBadgeCount: null);
+                getBadgeCount: () =>
+                {
+                    try
+                    {
+                        return MessageManager.UnreadCounts.Values.Sum();
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
+                });
 
             if (!appRegistered)
             {
@@ -394,6 +435,141 @@ namespace SmartphoneAppMessenger
             Game1.activeClickableMenu = new MessengerAppScreen(
                 iSmartphoneApi,
                 () => iSmartphoneApi.OpenPhoneHomeScreen());
+        }
+
+        public static void CheckSendNewMessage()
+        {
+            int timePassed = Game1.timeOfDay - lastTimeReceiveMessage;
+            int baseChance = Config.NewMessageChance == ModConfig.NewMessageChanceLow
+                ? (timePassed - 100) / 100
+                : (timePassed - 100) / 50;
+            baseChance = Math.Min(baseChance, 15);
+
+            if (Game1.random.NextDouble() < baseChance / 100.0)
+            {
+                List<string> npcCandidates = MessageManager.GetAvailableNpcNames()
+                    .OrderByDescending(name => Game1.player.getFriendshipHeartLevelForNPC(name))
+                    .ToList();
+
+                if (npcCandidates.Count == 0)
+                    return;
+
+                double power = 1.4;
+                int maxValue = Math.Min(npcCandidates.Count, 20);
+                if (maxValue < 1)
+                    return;
+
+                double rand = Game1.random.NextDouble();
+                int result = (int)(Math.Pow(rand, power) * maxValue);
+
+                int counter = 0;
+
+                while (counter < 3)
+                {
+                    string npcName = npcCandidates[Math.Min(result + counter, maxValue - 1)];
+                    NPC npc = Game1.getCharacterFromName(npcName, mustBeVillager: false);
+
+                    if (npc == null)
+                    {
+                        counter++;
+                        continue;
+                    }
+
+                    long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    long lastTime = MessageManager.LatestMessageTimestamps.TryGetValue(npcName, out int time) ? time : 0;
+
+                    if (currentTime - lastTime > 180 && !MessageManager.NpcMessagesToday.ContainsKey(npcName))
+                    {
+                        bool talkedToToday = Game1.player.friendshipData.TryGetValue(npcName, out Friendship? friendship)
+                                             && friendship.TalkedToToday;
+
+                        if (!talkedToToday && !Config.DisableDailyMessage)
+                        {
+                            if (friendship != null)
+                                friendship.TalkedToToday = true;
+
+                            npc.checkForNewCurrentDialogue(Game1.player.getFriendshipHeartLevelForNPC(npcName));
+
+                            if (npc.currentMarriageDialogue != null && npc.currentMarriageDialogue.Count > 0)
+                            {
+                                if (npc.CurrentDialogue == null)
+                                    npc.CurrentDialogue = new Stack<Dialogue>();
+
+                                for (int i = npc.currentMarriageDialogue.Count - 1; i >= 0; i--)
+                                {
+                                    var dialogueRef = npc.currentMarriageDialogue[i];
+                                    Dialogue actualDialogue = dialogueRef.GetDialogue(npc);
+
+                                    if (actualDialogue != null)
+                                    {
+                                        npc.CurrentDialogue.Push(actualDialogue);
+                                    }
+                                }
+
+                                npc.currentMarriageDialogue.Clear();
+                            }
+
+                            if (npc.CurrentDialogue != null && npc.CurrentDialogue.Count > 0)
+                            {
+                                Task.Run(async () =>
+                                {
+                                    await PhoneDialogueRuntime.DeliverDialogueSequenceAsync(
+                                        npcName,
+                                        npc.CurrentDialogue,
+                                        useRandomDelay: false,
+                                        minDelayMs: 0,
+                                        maxDelayMs: 1);
+
+                                    npc.CurrentDialogue?.Clear();
+                                });
+                            }
+                        }
+                        else
+                        {
+                            if (iUnlimitedEventExpansionApi != null && Game1.timeOfDay < 1900 && Game1.random.NextDouble() < 0.3 && Game1.player.getFriendshipHeartLevelForNPC(npcName) >= 3 && iUnlimitedEventExpansionApi.CanScheduleNewEvent())
+                            {
+                                Task.Run(async () =>
+                                {
+                                    if (!TryConsumeAiCallSlot())
+                                        return;
+
+                                    string messages = await SendMessageToAssistant(npcName, type: "invite");
+                                    if (!string.IsNullOrWhiteSpace(messages)
+                                        && !messages.StartsWith("SYSTEM:", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (messages.StartsWith($"{npcName}:", StringComparison.OrdinalIgnoreCase))
+                                            messages = messages.Substring(npcName.Length + 1).TrimStart();
+                                        MessageManager.AddMessage(npcName, messages, type: "response");
+                                        lastTimeReceiveMessage = Game1.timeOfDay;
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                Task.Run(async () =>
+                                {
+                                    if (!TryConsumeAiCallSlot())
+                                        return;
+
+                                    string messages = await SendMessageToAssistant(npcName, type: "text");
+                                    if (!string.IsNullOrWhiteSpace(messages)
+                                        && !messages.StartsWith("SYSTEM:", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (messages.StartsWith($"{npcName}:", StringComparison.OrdinalIgnoreCase))
+                                            messages = messages.Substring(npcName.Length + 1).TrimStart();
+                                        MessageManager.AddMessage(npcName, messages, type: "response");
+                                        lastTimeReceiveMessage = Game1.timeOfDay;
+                                    }
+                                });
+                            }
+                        }
+
+                        break;
+                    }
+
+                    counter++;
+                }
+            }
         }
     }
 }

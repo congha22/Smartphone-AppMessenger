@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
 
-namespace Smartphone
+namespace SmartphoneAppMessenger
 {
     public enum AppIconType
     {
@@ -455,5 +455,23 @@ namespace Smartphone
         /// <returns>The Texture2D of the requested app icon, or null.</returns>
         Texture2D? GetAppTexture(AppIconType appIconType);
 
+        /// <summary>
+        /// Opens the photo app in selection/view-only mode to retrieve photo texture and/or metadata.
+        /// </summary>
+        /// <param name="limit">The maximum number of photos that can be selected (must be greater than 0).</param>
+        /// <param name="getTexture">Whether to retrieve the texture data.</param>
+        /// <param name="getMetadata">Whether to retrieve the metadata.</param>
+        /// <param name="onComplete">Callback invoked when user finishes selection or cancels (passes JSON string representing List of SelectedPhotoResult, or empty list).</param>
+        void RetrievePhotos(int limit, bool getTexture, bool getMetadata, Action<string> onComplete);
+    }
+
+    public class SelectedPhotoResult
+    {
+        public string AbsolutePath { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string Tag { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string Timestamp { get; set; } = string.Empty;
+        public byte[]? TextureData { get; set; }
     }
 }

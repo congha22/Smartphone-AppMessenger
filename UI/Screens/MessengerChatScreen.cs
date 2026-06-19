@@ -16,7 +16,7 @@ namespace SmartphoneAppMessenger
     public partial class MessengerChatScreen : IClickableMenu
     {
         private readonly ISmartPhoneApi smartphoneApi;
-        private readonly string npcName;
+        public readonly string npcName;
         private readonly Action onBack;
 
         // Layout bounds
@@ -283,7 +283,10 @@ namespace SmartphoneAppMessenger
             Rectangle contentRect = GetContentBounds();
             int inputY = contentRect.Bottom - ScaleValue(60);
 
-            bool chattedToday = MessageManager.NpcMessagesToday.ContainsKey(this.npcName) || (ModEntry.Config?.DisableDailyMessage ?? false);
+            bool isPlayer = Game1.getOnlineFarmers().Any(f => string.Equals(f.Name, this.npcName, StringComparison.OrdinalIgnoreCase))
+                            || MessageManager.PlayerConversations.ContainsKey(this.npcName);
+
+            bool chattedToday = isPlayer || MessageManager.NpcMessagesToday.ContainsKey(this.npcName) || (ModEntry.Config?.DisableDailyMessage ?? false);
             if (!chattedToday)
             {
                 string selectedNpcDisplayName = this.npcName;
@@ -353,6 +356,65 @@ namespace SmartphoneAppMessenger
             this.chatTextBox.Clear();
             this.chatSelectedPhotos.Clear();
             CloseChatPhotoPicker(clearSelection: true);
+
+            bool isPlayer = Game1.getOnlineFarmers().Any(f => string.Equals(f.Name, this.npcName, StringComparison.OrdinalIgnoreCase))
+                            || MessageManager.PlayerConversations.ContainsKey(this.npcName);
+
+            if (isPlayer)
+            {
+                var onlineTarget = Game1.getOnlineFarmers().FirstOrDefault(f => string.Equals(f.Name, this.npcName, StringComparison.OrdinalIgnoreCase));
+                if (onlineTarget == null)
+                {
+                    MessageManager.AddPlayerMessage(this.npcName, $"SYSTEM: {this.npcName} is offline. Message could not be sent.", isFromPlayer: false);
+                    RebuildChatBubbles();
+                    this.lastMessageCount = MessageManager.GetMessagesForNpc(this.npcName).Count;
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    MessageManager.AddPlayerMessage(this.npcName, text, isFromPlayer: true);
+                    TransferManager.SendTextMessage(this.npcName, text);
+                }
+
+                if (photosToSend.Count > 0)
+                {
+                    string activeSave = MessageManager.GetActiveSaveFolderName();
+                    string photoSharedDir = Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "userdata", activeSave, "photo_shared");
+                    Directory.CreateDirectory(photoSharedDir);
+
+                    List<string> relativePaths = new List<string>();
+
+                    foreach (string photoPath in photosToSend)
+                    {
+                        if (File.Exists(photoPath))
+                        {
+                            string extension = Path.GetExtension(photoPath);
+                            string destFileName = Guid.NewGuid().ToString("N") + extension;
+                            string destPath = Path.Combine(photoSharedDir, destFileName);
+                            File.Copy(photoPath, destPath, overwrite: true);
+
+                            string relativePath = "photo_shared/" + destFileName;
+                            relativePaths.Add(relativePath);
+
+                            TransferManager.QueueSend("Photo", destFileName, destPath, this.npcName);
+                        }
+                    }
+
+                    if (relativePaths.Count > 0)
+                    {
+                        string localPhotoMsg = "PlayerPhoto: " + string.Join("||", relativePaths);
+                        MessageManager.AddPlayerMessage(this.npcName, localPhotoMsg, isFromPlayer: true);
+
+                        string remotePhotoMsg = "NpcPhoto: " + string.Join("||", relativePaths);
+                        TransferManager.SendTextMessage(this.npcName, remotePhotoMsg);
+                    }
+                }
+
+                RebuildChatBubbles();
+                this.lastMessageCount = MessageManager.GetMessagesForNpc(this.npcName).Count;
+                return;
+            }
 
             if (!string.IsNullOrWhiteSpace(text))
             {
@@ -546,15 +608,15 @@ namespace SmartphoneAppMessenger
                                 if (bubble.PhotoPaths.Count > 1)
                                 {
                                     Rectangle prevArrowBounds = new Rectangle(
-                                        drawBounds.X + ScaleValue(4),
-                                        drawBounds.Y + drawBounds.Height / 2 - ScaleValue(16),
-                                        ScaleValue(32),
-                                        ScaleValue(32));
+                                        boxX + ScaleValue(6),
+                                        messageY + bubble.Height / 2 - ScaleValue(19),
+                                        ScaleValue(38),
+                                        ScaleValue(38));
                                     Rectangle nextArrowBounds = new Rectangle(
-                                        drawBounds.Right - ScaleValue(36),
-                                        drawBounds.Y + drawBounds.Height / 2 - ScaleValue(16),
-                                        ScaleValue(32),
-                                        ScaleValue(32));
+                                        boxX + bubble.Width - ScaleValue(38) - ScaleValue(6),
+                                        messageY + bubble.Height / 2 - ScaleValue(19),
+                                        ScaleValue(38),
+                                        ScaleValue(38));
 
 
                                     this.chatPhotoNavigationEntries.Add(new ChatPhotoNavigationEntry
@@ -610,15 +672,15 @@ namespace SmartphoneAppMessenger
                                 if (bubble.PhotoPaths.Count > 1)
                                 {
                                     Rectangle prevArrowBounds = new Rectangle(
-                                        drawBounds.X + ScaleValue(4),
-                                        drawBounds.Y + drawBounds.Height / 2 - ScaleValue(16),
-                                        ScaleValue(32),
-                                        ScaleValue(32));
+                                        boxX + ScaleValue(6),
+                                        messageY + bubble.Height / 2 - ScaleValue(19),
+                                        ScaleValue(38),
+                                        ScaleValue(38));
                                     Rectangle nextArrowBounds = new Rectangle(
-                                        drawBounds.Right - ScaleValue(36),
-                                        drawBounds.Y + drawBounds.Height / 2 - ScaleValue(16),
-                                        ScaleValue(32),
-                                        ScaleValue(32));
+                                        boxX + bubble.Width - ScaleValue(38) - ScaleValue(6),
+                                        messageY + bubble.Height / 2 - ScaleValue(19),
+                                        ScaleValue(38),
+                                        ScaleValue(38));
 
 
                                     this.chatPhotoNavigationEntries.Add(new ChatPhotoNavigationEntry

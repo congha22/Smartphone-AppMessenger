@@ -51,6 +51,17 @@ namespace SmartphoneAppMessenger
                 if (!UnreadCounts.ContainsKey(npcName))
                     UnreadCounts[npcName] = 0;
                 UnreadCounts[npcName] = Math.Min(9, UnreadCounts[npcName] + 1);
+
+                bool isChatScreenOpenForNpc = Game1.activeClickableMenu is MessengerChatScreen chatScreen 
+                                              && string.Equals(chatScreen.npcName, npcName, StringComparison.OrdinalIgnoreCase);
+
+                if (!isChatScreenOpenForNpc)
+                {
+                    NPC? npc = Game1.getCharacterFromName(npcName);
+                    string displayName = npc?.displayName ?? npcName;
+                    Game1.addHUDMessage(new HUDMessage($"A new message from {displayName}", HUDMessage.newQuest_type));
+                    DelayedAction.playSoundAfterDelay("getNewSpecialItem", 0);
+                }
             }
 
 
@@ -128,6 +139,10 @@ namespace SmartphoneAppMessenger
 
         public static List<string> GetMessagesForNpc(string npcName)
         {
+            if (PlayerConversations.TryGetValue(npcName, out var playerHistory))
+            {
+                return new List<string>(playerHistory);
+            }
             var combined = new List<string>();
             if (NpcMessagesHistory.TryGetValue(npcName, out var history))
             {
@@ -258,6 +273,7 @@ namespace SmartphoneAppMessenger
 
             LoadMetadata(helper);
             LoadPlayerProfile(helper);
+            LoadPlayerHistory(helper);
 
 
             string folderPath = Path.Combine(helper.DirectoryPath, "userdata", GetActiveSaveFolderName());

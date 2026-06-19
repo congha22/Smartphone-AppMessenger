@@ -54,13 +54,13 @@ namespace SmartphoneAppMessenger
             if (string.IsNullOrWhiteSpace(imagePath))
                 return false;
 
-            if (this.avatarImageCache.TryGetValue(imagePath, out Texture2D? cachedTexture) && cachedTexture != null)
+            if (avatarImageCache.TryGetValue(imagePath, out Texture2D? cachedTexture) && cachedTexture != null)
             {
                 texture = cachedTexture;
                 return true;
             }
 
-            if (this.avatarFailedImagePaths.Contains(imagePath))
+            if (avatarFailedImagePaths.Contains(imagePath))
                 return false;
 
             try
@@ -69,7 +69,7 @@ namespace SmartphoneAppMessenger
                 {
                     using FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     Texture2D loadedTexture = Texture2D.FromStream(Game1.graphics.GraphicsDevice, stream);
-                    this.avatarImageCache[imagePath] = loadedTexture;
+                    avatarImageCache[imagePath] = loadedTexture;
                     texture = loadedTexture;
                     return true;
                 }
@@ -78,7 +78,7 @@ namespace SmartphoneAppMessenger
                     Texture2D loadedTexture = this.smartphoneApi.GetPlayerPhotoTexture(imagePath);
                     if (loadedTexture != null)
                     {
-                        this.avatarImageCache[imagePath] = loadedTexture;
+                        avatarImageCache[imagePath] = loadedTexture;
                         texture = loadedTexture;
                         return true;
                     }
@@ -89,7 +89,7 @@ namespace SmartphoneAppMessenger
                 // ignore
             }
 
-            this.avatarFailedImagePaths.Add(imagePath);
+            avatarFailedImagePaths.Add(imagePath);
             return false;
         }
 
@@ -150,8 +150,7 @@ namespace SmartphoneAppMessenger
 
         private void SaveAvatarRightAway(string path)
         {
-            this.avatarImageCache.Clear();
-            this.avatarFailedImagePaths.Clear();
+            ClearAvatarCache();
 
             if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
             {
@@ -192,6 +191,11 @@ namespace SmartphoneAppMessenger
             }
 
             MessageManager.SavePlayerProfile(ModEntry.Instance.Helper);
+
+            if (!string.IsNullOrWhiteSpace(MessageManager.currentPlayerAvatar))
+            {
+                TransferManager.SendSelectedAvatar(MessageManager.currentPlayerAvatar);
+            }
         }
 
         private void SaveProfileData()
