@@ -152,5 +152,14 @@ namespace SmartphoneAppMessenger
 
             return null;
         }
+
+        public static bool IsPlayerBirthdayToday()
+        {
+            if (!Context.IsWorldReady)
+                return false;
+
+            return string.Equals(currentPlayerBirthSeason, Game1.currentSeason, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(currentPlayerBirthDate, Game1.dayOfMonth.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

@@ -220,8 +220,6 @@ namespace SmartphoneAppMessenger
 
         private void DrawProfileEditor(SpriteBatch b)
         {
-            Rectangle contentRect = GetContentBounds();
-
             int titleX = PhoneX(105);
             int titleY = PhoneY(65);
             b.DrawString(Game1.dialogueFont, "Profile", new Vector2(titleX, titleY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
@@ -666,28 +664,27 @@ namespace SmartphoneAppMessenger
 
         private void DrawSocialProfileAvatarCameraButton(SpriteBatch b, Rectangle bounds)
         {
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                return;
+
+            bool hovered = bounds.Contains(Game1.getMouseX(), Game1.getMouseY());
+            Color boxColor = hovered
+                ? new Color(95, 145, 185, 135)
+                : new Color(20, 20, 20, 110);
+
             IClickableMenu.drawTextureBox(
-                b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
-                bounds.X,
-                bounds.Y,
-                bounds.Width,
-                bounds.Height,
-                new Color(0, 0, 0, 140),
-                1f,
-                false);
+                b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+                bounds.X, bounds.Y, bounds.Width, bounds.Height,
+                boxColor, 1f, false);
 
-            Rectangle iconSource = new Rectangle(72, 32, 18, 15);
-            int iconW = ScaleValue(18);
-            int iconH = ScaleValue(15);
-            Rectangle dest = new Rectangle(
-                bounds.X + (bounds.Width - iconW) / 2,
-                bounds.Y + (bounds.Height - iconH) / 2,
-                iconW,
-                iconH);
+            int iconPadding = ScaleValue(7);
+            Rectangle iconBounds = new Rectangle(
+                bounds.X + iconPadding,
+                bounds.Y + iconPadding,
+                Math.Max(1, bounds.Width - (iconPadding * 2)),
+                Math.Max(1, bounds.Height - (iconPadding * 2)));
 
-            b.Draw(Game1.mouseCursors2, dest, iconSource, Color.White);
+            b.Draw(Game1.mouseCursors2, iconBounds, new Rectangle(72, 32, 18, 15), Color.White);
         }
 
 

@@ -45,61 +45,13 @@ namespace SmartphoneAppMessenger
         public string NewMessageChance { get; set; } = NewMessageChanceDefault;
         public string Language { get; set; } = "English";
 
-        private string _key = string.Empty;
-        private string _model = OpenAIModel_54mini;
-        private string _customApiKey = string.Empty;
+        public string Key { get; set; } = string.Empty;
+        public string Model { get; set; } = OpenAIModel_54mini;
 
-        // advance
-        public string Key
-        {
-            get => _key;
-            set => _key = (value ?? string.Empty).Trim();
-        }
-
-        public string Model
-        {
-            get => string.IsNullOrWhiteSpace(_model) ? OpenAIModel_54mini : _model;
-            set => _model = string.IsNullOrWhiteSpace(value) ? OpenAIModel_54mini : value.Trim();
-        }
-
-        public string CustomApiEndpoint { get; set; } = string.Empty;
-
-        public string CustomApiKey
-        {
-            get => _customApiKey;
-            set => _customApiKey = (value ?? string.Empty).Trim();
-        }
-
-        public string CustomApiKeyHeader { get; set; } = "Authorization";
-        public string CustomApiKeyPrefix { get; set; } = "Bearer";
-        public string CustomApiPayloadTemplate { get; set; } = "{\"model\":\"MODEL_HERE\",\"messages\":[{\"role\":\"system\",\"content\":\"SYSTEM_INPUT_HERE\"},{\"role\":\"user\",\"content\":\"USER_INPUT_HERE\"}]}";
-        public string CustomApiResponseTextPath { get; set; } = "choices[0].message.content";
-        public int CustomApiTimeoutSeconds { get; set; } = 45;
 
         // Legacy aliases for older config.json files.
-        public string OpenAIKey
-        {
-            get => Key;
-            set
-            {
-                if (!string.IsNullOrWhiteSpace(value))
-                    Key = value;
-                else if (string.IsNullOrWhiteSpace(_key))
-                    _key = string.Empty;
-            }
-        }
-
-        public string OpenAIModel
-        {
-            get => Model;
-            set
-            {
-                if (!string.IsNullOrWhiteSpace(value))
-                    Model = value;
-                else if (string.IsNullOrWhiteSpace(_model))
-                    _model = OpenAIModel_54mini;
-            }
-        }
+        public string OpenAIKey { get => Key; set => Key = value; }
+        public string OpenAIModel { get => Model; set => Model = value; }
         public string CharacteristicMode { get; set; } = CharacteristicModeShort;
 
 
@@ -113,5 +65,18 @@ namespace SmartphoneAppMessenger
         public bool DisableDailyMessage { get; set; } = false;
 
         public string IgnoredNpc { get; set; } = "Leo, Krobus, Dwarf, Gunther, Birdie, Bouncer, MoonSBV, PanSBV, RaccoonSBV, Leximonster, Dianna, Torts";
+
+
+
+
+
+        // advance
+        public string CustomApiEndpoint { get; set; } = string.Empty;
+        public string CustomApiKey { get; set; } = string.Empty;
+        public string CustomApiKeyHeader { get; set; } = "Authorization";
+        public string CustomApiKeyPrefix { get; set; } = "Bearer";
+        public string CustomApiPayloadTemplate { get; set; } = "{\"model\":\"MODEL_HERE\",\"messages\":[{\"role\":\"system\",\"content\":\"SYSTEM_INPUT_HERE\"},{\"role\":\"user\",\"content\":\"USER_INPUT_HERE\"}]}";
+        public string CustomApiResponseTextPath { get; set; } = "choices[0].message.content";
+        public int CustomApiTimeoutSeconds { get; set; } = 45;
     }
 }

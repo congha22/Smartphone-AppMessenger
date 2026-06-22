@@ -169,7 +169,7 @@ namespace SmartphoneAppMessenger
             switch (key)
             {
                 case Keys.Back:
-                    ApplyDelete(deleteForward: false);
+                    // Ignored here because it is handled by RecieveCommandInput('\b') to prevent duplicate edits.
                     return true;
 
                 case Keys.Delete:

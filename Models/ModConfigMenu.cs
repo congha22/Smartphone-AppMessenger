@@ -96,6 +96,14 @@ namespace SmartphoneAppMessenger
                 setValue: value => Config.ShowMessageImageTags = value
             );
 
+            configMenu.AddBoolOption(
+                mod: ModManifest,
+                name: () => "Show AI Credit",
+                tooltip: () => "Show an AI credit indicator when receiving an AI message.",
+                getValue: () => Config.ShowAiCredit,
+                setValue: value => Config.ShowAiCredit = value
+            );
+
             configMenu.AddPageLink(
                 mod: ModManifest,
                 pageId: "ai-settings",
@@ -115,6 +123,13 @@ namespace SmartphoneAppMessenger
                 pageId: "misc-settings",
                 text: () => "Miscellaneous",
                 tooltip: () => "Configure ignored NPCs and messaging chances."
+            );
+
+            configMenu.AddPageLink(
+                mod: ModManifest,
+                pageId: "advance-settings",
+                text: () => "Advance - Custom API",
+                tooltip: () => "Call to your own API endpoint. Check out Forum for instruction."
             );
 
             // AI Settings page
@@ -160,16 +175,17 @@ namespace SmartphoneAppMessenger
                 max: 5000
             );
 
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                name: () => "Show AI Credit",
-                tooltip: () => "Show an AI credit indicator when receiving an AI message.",
-                getValue: () => Config.ShowAiCredit,
-                setValue: value => Config.ShowAiCredit = value
-            );
-
             // Limits & Storage page
             configMenu.AddPage(mod: ModManifest, pageId: "storage-limits", pageTitle: () => "Limits & Storage");
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "New Message Chance",
+                tooltip: () => "Adjust chance of getting spontaneous new messages.",
+                getValue: () => EnsureAllowedValue(Config.NewMessageChance, ModConfig.NewMessageChanceDefault, newMessageChanceValues),
+                setValue: value => Config.NewMessageChance = value,
+                allowedValues: newMessageChanceValues
+            );
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
@@ -196,19 +212,75 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "New Message Chance",
-                tooltip: () => "Adjust chance of getting spontaneous new messages.",
-                getValue: () => EnsureAllowedValue(Config.NewMessageChance, ModConfig.NewMessageChanceDefault, newMessageChanceValues),
-                setValue: value => Config.NewMessageChance = value,
-                allowedValues: newMessageChanceValues
-            );
-
-            configMenu.AddTextOption(
-                mod: ModManifest,
                 name: () => "Ignored NPCs",
                 tooltip: () => "Comma-separated list of NPCs who cannot chat.",
                 getValue: () => Config.IgnoredNpc ?? string.Empty,
                 setValue: value => Config.IgnoredNpc = value ?? string.Empty
+            );
+
+
+            configMenu.AddPage(mod: ModManifest, pageId: "advance-settings", pageTitle: () => "Advance - Custom API");
+            configMenu.AddParagraph(
+                mod: ModManifest,
+                text: () => "When using this advance setting, key and model selection on regular AI setting will be override."
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "Custom API Endpoint",
+                tooltip: () => "URL endpoint for a custom API (leave empty to use default providers).",
+                getValue: () => Config.CustomApiEndpoint,
+                setValue: value => Config.CustomApiEndpoint = (value ?? string.Empty).Trim()
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "Custom API Key",
+                tooltip: () => "Key for your custom API endpoint.",
+                getValue: () => Config.CustomApiKey,
+                setValue: value => Config.CustomApiKey = value
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "Custom API Key Header",
+                tooltip: () => "HTTP Header name for the API Key.",
+                getValue: () => Config.CustomApiKeyHeader,
+                setValue: value => Config.CustomApiKeyHeader = (value ?? "Authorization").Trim()
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "Custom API Key Prefix",
+                tooltip: () => "Prefix for the key (e.g. Bearer).",
+                getValue: () => Config.CustomApiKeyPrefix,
+                setValue: value => Config.CustomApiKeyPrefix = (value ?? "Bearer").Trim()
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "Custom API Payload Template",
+                tooltip: () => "JSON payload template.",
+                getValue: () => Config.CustomApiPayloadTemplate,
+                setValue: value => Config.CustomApiPayloadTemplate = value ?? string.Empty
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "Custom API Response JSON Path",
+                tooltip: () => "JSON path to extract response text.",
+                getValue: () => Config.CustomApiResponseTextPath,
+                setValue: value => Config.CustomApiResponseTextPath = value ?? string.Empty
+            );
+
+            configMenu.AddNumberOption(
+                mod: ModManifest,
+                name: () => "Custom API Timeout Seconds",
+                tooltip: () => "Request timeout in seconds.",
+                getValue: () => Config.CustomApiTimeoutSeconds,
+                setValue: value => Config.CustomApiTimeoutSeconds = Math.Clamp(value, 5, 300),
+                min: 5,
+                max: 300
             );
         }
     }

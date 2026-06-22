@@ -107,8 +107,6 @@ namespace SmartphoneAppMessenger
         {
             if (key == Keys.Back)
             {
-                this.chatTextBox.RecieveBackspace();
-                ModEntry.RegisterTextInputActivity(this.npcName);
                 return true;
             }
             bool handled = this.chatTextBox.HandleKeyPress(key);

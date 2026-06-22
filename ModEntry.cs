@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using HarmonyLib;
 using Microsoft.Xna.Framework.Graphics;
 using Smartphone;
 using StardewModdingAPI;
@@ -24,9 +26,10 @@ namespace SmartphoneAppMessenger
         public static Dictionary<string, string> NpcCharacteristicsMinimal = new();
         public static Dictionary<string, string> NpcCharacteristicsLong = new();
         public static IMonitor SMonitor = null!;
-        public static List<RecentEvent> RecentEvents = new(); // Just stubbing it out for compilation if it's not ported
+        public static List<RecentEvent> RecentEvents = new();
         public static Dictionary<string, string> npcConversationSummary = new();
-        public static Dictionary<string, GiftMemory> GiftMemories = new(); // Stub
+        public static Dictionary<string, GiftMemory> GiftMemories = new(StringComparer.OrdinalIgnoreCase);
+        public static bool isTodayEventAdded = false;
         public static List<string> FarmCropNames = new();
         public static List<string> FarmTreeNames = new();
         public static int lastTimeReceiveMessage = 300;
@@ -217,11 +220,16 @@ namespace SmartphoneAppMessenger
             helper.Events.GameLoop.DayEnding += this.OnDayEnding;
             helper.Events.GameLoop.DayStarted += this.OnDayStarted;
             helper.Events.GameLoop.TimeChanged += this.OnTimeChanged;
-
+            helper.Events.GameLoop.Saving += this.OnSaving;
+            helper.Events.GameLoop.OneSecondUpdateTicked += this.OnOneSecondUpdateTicked;
+ 
             // Multiplayer chunked transfer events
             helper.Events.GameLoop.UpdateTicked += TransferManager.OnUpdateTicked;
             helper.Events.Multiplayer.ModMessageReceived += TransferManager.OnModMessageReceived;
             helper.Events.Multiplayer.PeerConnected += TransferManager.OnPeerConnected;
+
+            var harmony = new Harmony(this.ModManifest.UniqueID);
+            harmony.PatchAll();
         }
 
         public override object GetApi()
@@ -254,6 +262,12 @@ namespace SmartphoneAppMessenger
             string summaryPath = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName(), "npc_conversation_summary.json");
             npcConversationSummary = this.Helper.Data.ReadJsonFile<Dictionary<string, string>>(summaryPath)
                 ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+ 
+            string saveDir = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName());
+            GiftMemories = this.Helper.Data.ReadJsonFile<Dictionary<string, GiftMemory>>(System.IO.Path.Combine(saveDir, "gift_memory.json"))
+                ?? new Dictionary<string, GiftMemory>(StringComparer.OrdinalIgnoreCase);
+            RecentEvents = this.Helper.Data.ReadJsonFile<List<RecentEvent>>(System.IO.Path.Combine(saveDir, "recent_event_memory.json"))
+                ?? new List<RecentEvent>();
 
             MessageManager.LoadHistory(this.Helper);
             PhoneDialogueRuntime.ClearDailyState();
@@ -294,6 +308,24 @@ namespace SmartphoneAppMessenger
         private void OnDayEnding(object? sender, DayEndingEventArgs e)
         {
             ClearPendingQueuedChatReplies();
+ 
+            // gift memory
+            var giftKeysToRemove = new List<string>();
+            foreach (var entry in GiftMemories)
+            {
+                entry.Value.DaysRemaining--;
+                if (entry.Value.DaysRemaining <= 0)
+                    giftKeysToRemove.Add(entry.Key);
+            }
+            foreach (var key in giftKeysToRemove)
+                GiftMemories.Remove(key);
+ 
+            // event memory
+            foreach (var evt in RecentEvents)
+                evt.DaysRemaining--;
+            RecentEvents = RecentEvents
+                .Where(evt => evt.DaysRemaining > 0)
+                .ToList();
 
             var conversationsToSummarize = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var kvp in MessageManager.NpcMessagesToday)
@@ -352,6 +384,7 @@ namespace SmartphoneAppMessenger
         private void OnDayStarted(object? sender, DayStartedEventArgs e)
         {
             lastTimeReceiveMessage = 600;
+            isTodayEventAdded = false;
             try
             {
                 MessengerChatScreen.ClearChatImageCache();
@@ -361,6 +394,12 @@ namespace SmartphoneAppMessenger
             {
                 this.Monitor.Log($"Error clearing photo caches: {ex.Message}", LogLevel.Warn);
             }
+
+            string saveDir = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName());
+            GiftMemories = this.Helper.Data.ReadJsonFile<Dictionary<string, GiftMemory>>(System.IO.Path.Combine(saveDir, "gift_memory.json"))
+                ?? new Dictionary<string, GiftMemory>(StringComparer.OrdinalIgnoreCase);
+            RecentEvents = this.Helper.Data.ReadJsonFile<List<RecentEvent>>(System.IO.Path.Combine(saveDir, "recent_event_memory.json"))
+                ?? new List<RecentEvent>();
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -568,6 +607,74 @@ namespace SmartphoneAppMessenger
                     }
 
                     counter++;
+                }
+            }
+        }
+
+        private void OnSaving(object? sender, SavingEventArgs e)
+        {
+            string saveDir = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName());
+            this.Helper.Data.WriteJsonFile(System.IO.Path.Combine(saveDir, "gift_memory.json"), GiftMemories);
+            this.Helper.Data.WriteJsonFile(System.IO.Path.Combine(saveDir, "recent_event_memory.json"), RecentEvents);
+        }
+
+        private void OnOneSecondUpdateTicked(object? sender, OneSecondUpdateTickedEventArgs e)
+        {
+            if (!Context.IsWorldReady)
+                return;
+
+            if (e.IsMultipleOf(15))
+            {
+                CheckCurrentEvent();
+            }
+        }
+
+        public static List<NPC> GetNpcsWithBirthdayToday()
+        {
+            int today = Game1.dayOfMonth;
+            string season = Game1.currentSeason;
+
+            return NpcBirthdaysByDate.TryGetValue((season, today), out var list)
+                ? list
+                : new List<NPC>();
+        }
+
+        public static void CheckCurrentEvent()
+        {
+            if (Game1.currentSeason == "spring" && Game1.dayOfMonth == 24 && Game1.player.dancePartner.TryGetVillager() != null && !isTodayEventAdded)
+            {
+                RecentEvents.Add(new RecentEvent
+                {
+                    Description = $"Player and {Game1.player.dancePartner.TryGetVillager().Name} danced together at the Flower Dance",
+                    DaysRemaining = 7
+                });
+                isTodayEventAdded = true;
+            }
+            else if (Game1.CurrentEvent != null && Game1.CurrentEvent.isFestival && !isTodayEventAdded && !(Game1.currentSeason == "spring" && Game1.dayOfMonth == 24))
+            {
+                string festivalId = Game1.CurrentEvent.FestivalName;
+                RecentEvents.Add(new RecentEvent
+                {
+                    Description = $"Player joined {festivalId} event with everyone in the town.",
+                    DaysRemaining = 5
+                });
+                isTodayEventAdded = true;
+            }
+        }
+
+        [HarmonyPatch(typeof(NPC), nameof(NPC.receiveGift))]
+        [HarmonyPatch(new[] { typeof(StardewValley.Object), typeof(Farmer), typeof(bool), typeof(float), typeof(bool) })]
+        public static class NPCReceiveGiftPatch
+        {
+            public static void Postfix(NPC __instance, StardewValley.Object o)
+            {
+                if (__instance != null && o != null)
+                {
+                    GiftMemories[__instance.Name] = new GiftMemory
+                    {
+                        GiftName = o.DisplayName,
+                        DaysRemaining = 3
+                    };
                 }
             }
         }

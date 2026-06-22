@@ -695,10 +695,59 @@ namespace SmartphoneAppMessenger
                 }
                 else if (this.profileAvatarCameraButtonBounds.Contains(x, y))
                 {
-                    this.avatarSelectedPhotoPath = this.avatarDraft;
-                    EnsureAvatarPhotoCandidatesLoaded();
-                    this.currentState = ScreenState.AvatarPicker;
                     Game1.playSound("smallSelect");
+                    Game1.activeClickableMenu = null;
+
+                    var api = this.smartphoneApi;
+                    var backAction = this.onBack;
+
+                    api.RetrievePhotos(limit: 1, getTexture: true, getMetadata: false, onComplete: (jsonResult) =>
+                    {
+                        var screen = new MessengerAppScreen(api, backAction);
+                        screen.OpenProfileEditor();
+                        Game1.activeClickableMenu = screen;
+
+                        List<SelectedPhotoResult>? results = null;
+                        try
+                        {
+                            results = string.IsNullOrWhiteSpace(jsonResult)
+                                ? null
+                                : Newtonsoft.Json.JsonConvert.DeserializeObject<List<SelectedPhotoResult>>(jsonResult);
+                        }
+                        catch (Exception ex)
+                        {
+                            ModEntry.Instance.Monitor.Log($"Failed to deserialize avatar photo result: {ex.Message}", LogLevel.Error);
+                        }
+
+                        if (results != null && results.Count > 0 && results[0].TextureData != null)
+                        {
+                            try
+                            {
+                                string activeSave = MessageManager.GetActiveSaveFolderName();
+                                string photoSharedDir = Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "userdata", activeSave, "photo_shared");
+                                Directory.CreateDirectory(photoSharedDir);
+
+                                string id = Game1.player.UniqueMultiplayerID.ToString();
+                                foreach (var oldFile in Directory.GetFiles(photoSharedDir, $"{id}_avatar.*"))
+                                {
+                                    try { File.Delete(oldFile); } catch { }
+                                }
+
+                                string destPath = Path.Combine(photoSharedDir, $"{id}_avatar.jpg");
+                                File.WriteAllBytes(destPath, results[0].TextureData);
+
+                                ClearAvatarCache();
+
+                                MessageManager.currentPlayerAvatar = destPath;
+                                screen.avatarDraft = destPath;
+                                MessageManager.SavePlayerProfile(ModEntry.Instance.Helper);
+                            }
+                            catch (Exception ex)
+                            {
+                                ModEntry.Instance.Monitor.Log($"Failed to save avatar photo: {ex.Message}", LogLevel.Error);
+                            }
+                        }
+                    }, squareOnly: true);
                 }
                 else if (this.profileOkButtonBounds.Contains(x, y))
                 {

@@ -316,6 +316,7 @@ namespace SmartphoneAppMessenger
                 return;
 
             MessageManager.AddMessage(npcName, line, type: "response");
+            ModEntry.lastTimeReceiveMessage = Game1.timeOfDay;
         }
 
         private static void AddPlayerLine(string npcName, string line)

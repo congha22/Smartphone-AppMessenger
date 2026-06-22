@@ -462,7 +462,7 @@ namespace SmartphoneAppMessenger
         /// <param name="getTexture">Whether to retrieve the texture data.</param>
         /// <param name="getMetadata">Whether to retrieve the metadata.</param>
         /// <param name="onComplete">Callback invoked when user finishes selection or cancels (passes JSON string representing List of SelectedPhotoResult, or empty list).</param>
-        void RetrievePhotos(int limit, bool getTexture, bool getMetadata, Action<string> onComplete);
+        void RetrievePhotos(int limit, bool getTexture, bool getMetadata, Action<string> onComplete, bool squareOnly = false);
     }
 
     public class SelectedPhotoResult
