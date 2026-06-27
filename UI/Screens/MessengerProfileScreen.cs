@@ -19,8 +19,8 @@ namespace SmartphoneAppMessenger
         // PROFILE EDITOR & AVATAR PICKER IMPLEMENTATION
         // ========================================================
 
-        private int PhoneX(int baseOffset) => this.xPositionOnScreen + ScaleValue(baseOffset);
-        private int PhoneY(int baseOffset) => this.yPositionOnScreen + ScaleValue(baseOffset);
+        private int PhoneX(int baseOffset) => this.xPositionOnScreen + this.phoneContentOffsetX + ScaleValue(baseOffset - 40);
+        private int PhoneY(int baseOffset) => this.yPositionOnScreen + this.phoneContentOffsetY + ScaleValue(baseOffset - 110);
         private Rectangle PhoneRect(int baseX, int baseY, int baseWidth, int baseHeight) =>
             new Rectangle(PhoneX(baseX), PhoneY(baseY), ScaleValue(baseWidth), ScaleValue(baseHeight));
 
@@ -48,7 +48,7 @@ namespace SmartphoneAppMessenger
             return TryGetImageTexture(avatarPath, out texture);
         }
 
-        private bool TryGetImageTexture(string imagePath, out Texture2D texture)
+        internal static bool TryGetImageTexture(string imagePath, out Texture2D texture)
         {
             texture = null!;
             if (string.IsNullOrWhiteSpace(imagePath))
@@ -73,9 +73,9 @@ namespace SmartphoneAppMessenger
                     texture = loadedTexture;
                     return true;
                 }
-                else if (this.smartphoneApi != null)
+                else if (ModEntry.iSmartphoneApi != null)
                 {
-                    Texture2D loadedTexture = this.smartphoneApi.GetPlayerPhotoTexture(imagePath);
+                    Texture2D loadedTexture = ModEntry.iSmartphoneApi.GetPlayerPhotoTexture(imagePath);
                     if (loadedTexture != null)
                     {
                         avatarImageCache[imagePath] = loadedTexture;

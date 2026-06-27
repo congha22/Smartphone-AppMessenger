@@ -20,18 +20,18 @@ namespace SmartphoneAppMessenger
         private readonly Action onBack;
 
         // Layout bounds
-        private readonly int phoneFrameWidth;
-        private readonly int phoneFrameHeight;
-        private readonly int phoneContentOffsetX;
-        private readonly int phoneContentOffsetY;
-        private readonly float phoneUiScale;
+        private int phoneFrameWidth;
+        private int phoneFrameHeight;
+        private int phoneContentOffsetX;
+        private int phoneContentOffsetY;
+        private float phoneUiScale;
 
-        private readonly Texture2D? phoneFrameTexture;
-        private readonly Texture2D? phoneBackgroundTexture;
+        private Texture2D? phoneFrameTexture;
+        private Texture2D? phoneBackgroundTexture;
         private readonly Texture2D? appPhotoTexture;
 
-        private readonly int contentWidth;
-        private readonly int contentHeight;
+        private int contentWidth;
+        private int contentHeight;
 
         // Drag & Swipe State
         private bool isDragging;
@@ -507,16 +507,19 @@ namespace SmartphoneAppMessenger
                 b.Draw(this.phoneFrameTexture, frameRect, Color.White);
             }
 
+            this.smartphoneApi.DrawPhoneSizeButtons(b, this.xPositionOnScreen, this.yPositionOnScreen);
+
             // --- Draw Header on top of frame ---
             SpriteFont font = Game1.dialogueFont;
             float textScale = 1.0f * this.phoneUiScale;
-            Vector2 textPos = new Vector2(this.xPositionOnScreen + ScaleValue(105), this.yPositionOnScreen + ScaleValue(65));
+            Vector2 textPos = new Vector2(
+                this.xPositionOnScreen + this.phoneContentOffsetX + ScaleValue(65),
+                this.yPositionOnScreen + this.phoneContentOffsetY + ScaleValue(-45));
 
-            b.DrawString(font, this.npcName, textPos + new Vector2(1f, 1f), Color.Black * 0.3f, 0f, Vector2.Zero, textScale, SpriteEffects.None, 1f);
             b.DrawString(font, this.npcName, textPos, Color.Black, 0f, Vector2.Zero, textScale, SpriteEffects.None, 1f);
 
-            this.removeButton.bounds.X = this.xPositionOnScreen + ScaleValue(335);
-            this.removeButton.bounds.Y = this.yPositionOnScreen + ScaleValue(68);
+            this.removeButton.bounds.X = this.xPositionOnScreen + this.phoneContentOffsetX + ScaleValue(295);
+            this.removeButton.bounds.Y = this.yPositionOnScreen + this.phoneContentOffsetY + ScaleValue(-47);
             this.removeButton.draw(b, Color.White * 0.8f, 1f);
 
             if (this.chatPhotoPickerOpen)
@@ -893,6 +896,11 @@ namespace SmartphoneAppMessenger
         {
             this.lastMouseY = y;
 
+            if (this.smartphoneApi.HandlePhoneSizeButtonsClick(x, y, this.xPositionOnScreen, this.yPositionOnScreen))
+            {
+                return;
+            }
+
             if (this.smartphoneApi.HandlePhoneAppBottomNavClick(x, y, this.xPositionOnScreen, this.yPositionOnScreen, onBack: this.onBack))
             {
                 return;
@@ -976,9 +984,9 @@ namespace SmartphoneAppMessenger
                     foreach (var qa in this.currentQuickActions)
                     {
                         Rectangle customBounds = new Rectangle(this.chatAttachmentButtonBounds.X, currentY, btnWidth, btnHeight);
-                        this.activeQuickActions.Add(new QuickActionItem 
-                        { 
-                            Type = ChatQuickActionType.Custom, 
+                        this.activeQuickActions.Add(new QuickActionItem
+                        {
+                            Type = ChatQuickActionType.Custom,
                             Bounds = customBounds,
                             CustomAction = qa
                         });
@@ -1161,6 +1169,22 @@ namespace SmartphoneAppMessenger
 
         public override void receiveKeyPress(Keys key)
         {
+            bool isTyping = Game1.keyboardDispatcher.Subscriber == this.textInputSubscriber;
+            if (!isTyping)
+            {
+                string keyStr = key.ToString();
+                if (keyStr == this.smartphoneApi.GetDecreaseSizeKey())
+                {
+                    this.smartphoneApi.AdjustPhoneSize(-0.1f);
+                    return;
+                }
+                if (keyStr == this.smartphoneApi.GetIncreaseSizeKey())
+                {
+                    this.smartphoneApi.AdjustPhoneSize(0.1f);
+                    return;
+                }
+            }
+
             if (key == Keys.Escape)
             {
                 if (this.chatPhotoPickerOpen)
@@ -1204,6 +1228,43 @@ namespace SmartphoneAppMessenger
 
         public override void update(GameTime time)
         {
+            // Sync from API if modified externally
+            float activeScale = this.smartphoneApi.GetPhoneUiScale();
+            if (Math.Abs(this.phoneUiScale - activeScale) > 0.001f)
+            {
+                this.phoneUiScale = activeScale;
+                this.phoneFrameWidth = this.smartphoneApi.GetPhoneFrameWidth();
+                this.phoneFrameHeight = this.smartphoneApi.GetPhoneFrameHeight();
+                var (offX, offY) = this.smartphoneApi.GetPhoneContentOffset();
+                this.phoneContentOffsetX = offX;
+                this.phoneContentOffsetY = offY;
+                this.phoneFrameTexture = this.smartphoneApi.GetPhoneFrameTexture();
+                this.phoneBackgroundTexture = this.smartphoneApi.GetPhoneBackgroundTexture();
+
+                this.width = this.phoneFrameWidth;
+                this.height = this.phoneFrameHeight;
+
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
+                    this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
+                }
+                else
+                {
+                    this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                    this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+                }
+
+                this.removeButton = new ClickableTextureComponent(
+                    new Rectangle(0, 0, ScaleValue(32), ScaleValue(52)),
+                    Game1.mouseCursors,
+                    new Rectangle(564, 102, 16, 26),
+                    1.6f * this.phoneUiScale);
+
+                SetupChatInputs();
+                RebuildChatBubbles();
+            }
+
             base.update(time);
 
             this.chatTextBox.Update(time, IsChatInputActive());
@@ -1218,7 +1279,6 @@ namespace SmartphoneAppMessenger
                 int oldY = this.yPositionOnScreen;
                 this.xPositionOnScreen = Game1.getMouseX() - this.dragOffsetX;
                 this.yPositionOnScreen = Game1.getMouseY() - this.dragOffsetY;
-                ClampToViewport();
                 if (this.xPositionOnScreen != oldX || this.yPositionOnScreen != oldY)
                 {
                     this.smartphoneApi.SetPhonePosition(this.xPositionOnScreen, this.yPositionOnScreen);
@@ -1241,13 +1301,6 @@ namespace SmartphoneAppMessenger
                 this.lastMessageCount = currentMessages.Count;
                 RebuildChatBubbles();
             }
-        }
-
-
-        private void ClampToViewport()
-        {
-            this.xPositionOnScreen = Math.Max(0, Math.Min(this.xPositionOnScreen, Game1.uiViewport.Width - this.width));
-            this.yPositionOnScreen = Math.Max(0, Math.Min(this.yPositionOnScreen, Game1.uiViewport.Height - this.height));
         }
 
         protected override void cleanupBeforeExit()

@@ -44,6 +44,7 @@ namespace SmartphoneAppMessenger
         public string NpcMessageRequirement { get; set; } = NpcRequirementMeet;
         public string NewMessageChance { get; set; } = NewMessageChanceDefault;
         public string Language { get; set; } = "English";
+        public string AppIconStyle { get; set; } = "default";
 
         public string Key { get; set; } = string.Empty;
         public string Model { get; set; } = OpenAIModel_54mini;

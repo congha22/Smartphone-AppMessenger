@@ -20,17 +20,17 @@ namespace SmartphoneAppMessenger
         private readonly Action onBack;
 
         // Layout bounds
-        private readonly int phoneFrameWidth;
-        private readonly int phoneFrameHeight;
-        private readonly int phoneContentOffsetX;
-        private readonly int phoneContentOffsetY;
-        private readonly float phoneUiScale;
+        private int phoneFrameWidth;
+        private int phoneFrameHeight;
+        private int phoneContentOffsetX;
+        private int phoneContentOffsetY;
+        private float phoneUiScale;
 
-        private readonly Texture2D? phoneFrameTexture;
-        private readonly Texture2D? phoneBackgroundTexture;
+        private Texture2D? phoneFrameTexture;
+        private Texture2D? phoneBackgroundTexture;
 
-        private readonly int contentWidth;
-        private readonly int contentHeight;
+        private int contentWidth;
+        private int contentHeight;
 
         // Content
         private List<string> npcNames = new();
@@ -333,6 +333,8 @@ namespace SmartphoneAppMessenger
                 b.Draw(this.phoneFrameTexture, frameRect, Color.White);
             }
 
+            this.smartphoneApi.DrawPhoneSizeButtons(b, this.xPositionOnScreen, this.yPositionOnScreen);
+
             drawMouse(b);
         }
 
@@ -599,12 +601,32 @@ namespace SmartphoneAppMessenger
             }
             else
             {
+                if (Game1.keyboardDispatcher.Subscriber == this)
+                {
+                    Game1.keyboardDispatcher.Subscriber = null;
+                }
                 this.onBack?.Invoke();
             }
         }
 
         public override void receiveKeyPress(Microsoft.Xna.Framework.Input.Keys key)
         {
+            bool isTyping = KeyboardManager.IsTextInputActive(this) || this.activeProfileField != ProfileField.None;
+            if (!isTyping)
+            {
+                string keyStr = key.ToString();
+                if (keyStr == this.smartphoneApi.GetDecreaseSizeKey())
+                {
+                    this.smartphoneApi.AdjustPhoneSize(-0.1f);
+                    return;
+                }
+                if (keyStr == this.smartphoneApi.GetIncreaseSizeKey())
+                {
+                    this.smartphoneApi.AdjustPhoneSize(0.1f);
+                    return;
+                }
+            }
+
             if (key == Microsoft.Xna.Framework.Input.Keys.Escape)
             {
                 NavigateBack();
@@ -625,6 +647,11 @@ namespace SmartphoneAppMessenger
 
         public override void receiveLeftClick(int x, int y, bool playSound = true)
         {
+            if (this.smartphoneApi.HandlePhoneSizeButtonsClick(x, y, this.xPositionOnScreen, this.yPositionOnScreen))
+            {
+                return;
+            }
+
             if (this.smartphoneApi.HandlePhoneAppBottomNavClick(x, y, this.xPositionOnScreen, this.yPositionOnScreen, onBack: NavigateBack))
             {
                 return;
@@ -975,6 +1002,36 @@ namespace SmartphoneAppMessenger
                 this.Selected = true;
             }
 
+            // Sync from API if modified externally
+            float activeScale = this.smartphoneApi.GetPhoneUiScale();
+            if (Math.Abs(this.phoneUiScale - activeScale) > 0.001f)
+            {
+                this.phoneUiScale = activeScale;
+                this.phoneFrameWidth = this.smartphoneApi.GetPhoneFrameWidth();
+                this.phoneFrameHeight = this.smartphoneApi.GetPhoneFrameHeight();
+                var (offX, offY) = this.smartphoneApi.GetPhoneContentOffset();
+                this.phoneContentOffsetX = offX;
+                this.phoneContentOffsetY = offY;
+                this.phoneFrameTexture = this.smartphoneApi.GetPhoneFrameTexture();
+                this.phoneBackgroundTexture = this.smartphoneApi.GetPhoneBackgroundTexture();
+
+                this.width = this.phoneFrameWidth;
+                this.height = this.phoneFrameHeight;
+
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
+                    this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
+                }
+                else
+                {
+                    this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                    this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+                }
+
+                CalculateLayout(rebuildList: false);
+            }
+
             // Handle sorting delay
             if (this.isSortPending)
             {
@@ -992,7 +1049,6 @@ namespace SmartphoneAppMessenger
                 int oldY = this.yPositionOnScreen;
                 this.xPositionOnScreen = Game1.getMouseX() - this.dragOffsetX;
                 this.yPositionOnScreen = Game1.getMouseY() - this.dragOffsetY;
-                ClampToViewport();
                 if (this.xPositionOnScreen != oldX || this.yPositionOnScreen != oldY)
                 {
                     this.smartphoneApi.SetPhonePosition(this.xPositionOnScreen, this.yPositionOnScreen);
@@ -1008,12 +1064,6 @@ namespace SmartphoneAppMessenger
                 this.yPositionOnScreen = targetY;
                 CalculateLayout(rebuildList: false);
             }
-        }
-
-        private void ClampToViewport()
-        {
-            this.xPositionOnScreen = Math.Max(0, Math.Min(this.xPositionOnScreen, Game1.uiViewport.Width - this.width));
-            this.yPositionOnScreen = Math.Max(0, Math.Min(this.yPositionOnScreen, Game1.uiViewport.Height - this.height));
         }
 
         protected override void cleanupBeforeExit()

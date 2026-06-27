@@ -999,7 +999,7 @@ namespace SmartphoneAppMessenger
 
                 bool isPlayerBirthdayToday = MessageManager.IsPlayerBirthdayToday();
                 if (isPlayerBirthdayToday)
-                    MessageManager.AddMessage(npc.Name, "It is PLAYER **" + Game1.player.Name + "**'s birthday today.", type: "system");
+                    data += "It is PLAYER **" + Game1.player.Name + "**'s birthday today.";
 
                 if (planting != "")
                     data += $"\nPlayer planting some {planting} on the farm";

@@ -46,6 +46,12 @@ namespace SmartphoneAppMessenger
                 save: () =>
                 {
                     Helper.WriteConfig(Config);
+                    try
+                    {
+                        Instance.LoadIcons();
+                        Instance.RegisterMessengerApp();
+                    }
+                    catch { }
                 }
             );
 
@@ -78,6 +84,26 @@ namespace SmartphoneAppMessenger
                 getValue: () => EnsureAllowedValue(Config.NpcMessageRequirement, ModConfig.NpcRequirementMeet, npcRequirementValues),
                 setValue: value => Config.NpcMessageRequirement = value,
                 allowedValues: npcRequirementValues
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => "App Icon Style",
+                tooltip: () => "The style of the app icon on the smartphone home screen.",
+                getValue: () => string.IsNullOrWhiteSpace(Config.AppIconStyle) ? "default" : Config.AppIconStyle,
+                setValue: value =>
+                {
+                    Config.AppIconStyle = value == "v2" ? "v2" : "default";
+                    if (iSmartphoneApi != null)
+                    {
+                        try
+                        {
+                            iSmartphoneApi.SetComponentTheme("app_d5a1lamdtd.Smartphone-AppMessenger::messenger", Config.AppIconStyle);
+                        }
+                        catch { }
+                    }
+                },
+                allowedValues: new string[] { "default", "v2" }
             );
 
             configMenu.AddBoolOption(
