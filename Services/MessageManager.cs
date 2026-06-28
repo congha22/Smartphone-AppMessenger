@@ -91,44 +91,23 @@ namespace SmartphoneAppMessenger
             TrimMessagesForNpc(npcName);
         }
 
+        public static List<string> CachedAvailableNpcs = new();
+
+        public static void UpdateAvailableNpcs(List<string> names)
+        {
+            if (names != null)
+            {
+                CachedAvailableNpcs = names.Distinct().OrderBy(n => n).ToList();
+            }
+            else
+            {
+                CachedAvailableNpcs = new List<string>();
+            }
+        }
+
         public static List<string> GetAvailableNpcNames()
         {
-            List<string> npcNames = new List<string>();
-            string[] ignoredNpcs = ModEntry.Config.IgnoredNpc
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(n => n.Trim())
-                .ToArray();
-
-            foreach (NPC npc in Utility.getAllVillagers())
-            {
-                if (npc == null ||
-                    npc.IsMonster ||
-                    npc.IsInvisible ||
-                    !npc.CanSocialize ||
-                    ignoredNpcs.Contains(npc.Name, StringComparer.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                string req = ModEntry.Config.NpcMessageRequirement;
-                bool meetsReq = false;
-
-                if (string.Equals(req, ModConfig.NpcRequirementMeet, StringComparison.OrdinalIgnoreCase))
-                {
-                    meetsReq = Game1.player.friendshipData.ContainsKey(npc.Name);
-                }
-                else
-                {
-                    meetsReq = Game1.player.getFriendshipHeartLevelForNPC(npc.Name) >= 1;
-                }
-
-                if (meetsReq)
-                {
-                    npcNames.Add(npc.Name);
-                }
-            }
-
-            return npcNames.Distinct().OrderBy(n => n).ToList();
+            return CachedAvailableNpcs;
         }
 
         public static bool IsNpcUnlocked(string npcName)

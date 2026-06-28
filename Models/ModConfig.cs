@@ -6,8 +6,7 @@ namespace SmartphoneAppMessenger
 {
     public class ModConfig
     {
-        public const string NpcRequirementMeet = "Meet";
-        public const string NpcRequirementFriend = "Friend";
+
 
         public const string OpenAIModel_51 = "gpt-5.1";
         public const string OpenAIModel_5mini = "gpt-5-mini";
@@ -41,7 +40,7 @@ namespace SmartphoneAppMessenger
         public const string NewMessageChanceDefault = "Default";
         public const string NewMessageChanceLow = "Low";
 
-        public string NpcMessageRequirement { get; set; } = NpcRequirementMeet;
+
         public string NewMessageChance { get; set; } = NewMessageChanceDefault;
         public string Language { get; set; } = "English";
         public string AppIconStyle { get; set; } = "default";
@@ -65,7 +64,7 @@ namespace SmartphoneAppMessenger
 
         public bool DisableDailyMessage { get; set; } = false;
 
-        public string IgnoredNpc { get; set; } = "Leo, Krobus, Dwarf, Gunther, Birdie, Bouncer, MoonSBV, PanSBV, RaccoonSBV, Leximonster, Dianna, Torts";
+
 
 
 

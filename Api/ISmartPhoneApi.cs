@@ -26,6 +26,34 @@ namespace SmartphoneAppMessenger
         Size4x3,
         Size4x4,
     }
+
+
+    public class SelectedPhotoResult
+    {
+        public string AbsolutePath { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string Tag { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string Timestamp { get; set; } = string.Empty;
+        public byte[]? TextureData { get; set; }
+    }
+
+    public interface IContactActionCardButton
+    {
+        public string Text { get; set; }
+        public Color BackgroundColor { get; set; }
+        public Color TextColor { get; set; }
+        public Action<string>? OnClick { get; set; }
+    }
+
+    public class ContactActionCardButton : IContactActionCardButton
+    {
+        public string Text { get; set; } = string.Empty;
+        public Color BackgroundColor { get; set; } = Color.White;
+        public Color TextColor { get; set; } = Color.White;
+        public Action<string>? OnClick { get; set; }
+    }
+
     public interface ISmartPhoneApi
     {
         /// ======================================
@@ -38,14 +66,14 @@ namespace SmartphoneAppMessenger
         /// <param name="ownerModId">The unique ID of the mod that owns this app (e.g. d5a1lamdtd.markettown).</param>
         /// <param name="appId">A unique app ID within the owner mod (e.g. d5a1lamdtd.markettown.marketlog).</param>
         /// <param name="displayName">Name shown as a label under the app icon (e.g. Market Log).</param>
+        /// <param name="iconTexture">Texture used as the app icon (any size but should be square and above 84*84).</param>
         /// <param name="onClick">Callback invoked when the app icon is clicked.</param>
         /// <param name="closePhoneOnLaunch">Whether the phone menu should close before invoking <paramref name="onClick"/>.</param>
         /// <param name="sourceRect">Optional source rectangle if the icon is part of a spritesheet. If null, the full texture is used.</param>
+        /// <param name="isVisible">Optional callback to decide whether the icon should currently be visible (e.g. () => Context.IsWorldReady).</param>
         /// <param name="getBadgeCount">Optional callback to draw a badge count on the icon.</param>
         /// <param name="supportedSizes">Optional list of <see cref="AppSize"/> values the app icon supports as widget sizes.
         /// Defaults to <see cref="AppSize.Size1x1"/> only when null or empty.</param>
-        /// <param name="onDrawWidget">Optional callback to draw the widget based on the active size.</param>
-        /// <param name="themedIconTextures">Optional dictionary of themed icon textures.</param>
         /// <returns>True if registration succeeded; otherwise false.</returns>
         bool RegisterPhoneApp(
             string ownerModId,
@@ -68,6 +96,10 @@ namespace SmartphoneAppMessenger
         /// <returns>True if an app was removed; otherwise false.</returns>
         bool UnregisterPhoneApp(string ownerModId, string appId);
 
+
+
+
+
         /// ======================================
         /// API to control smartphone screen navigation.
         /// ======================================
@@ -78,6 +110,31 @@ namespace SmartphoneAppMessenger
         /// </summary>
         /// <returns>True if the home screen was opened; otherwise false.</returns>
         bool OpenPhoneHomeScreen();
+
+
+
+
+        /// ======================================
+        /// API for Contacts
+        /// ======================================
+
+        /// <summary>
+        /// Event that fires whenever the list of contactable NPCs changes.
+        /// Receives the updated list of NPC internal names.
+        /// </summary>
+        event Action<List<string>> ContactableNpcsChanged;
+
+        /// <summary>
+        /// Registers a new custom card under the contact info screen, allowing up to 4 buttons.
+        /// </summary>
+        /// <param name="modId">The unique ID of the mod registering the card.</param>
+        /// <param name="cardTitle">The title of the card (e.g. "Gift", "Social").</param>
+        /// <param name="buttons">A list of button definitions. Max 4 buttons.</param>
+        /// <param name="npcNames">An optional list of NPC internal names for which this card is available. If null or empty, it is available for all NPCs.</param>
+        /// <returns>True if successfully registered.</returns>
+        bool RegisterContactActionCard(string modId, string cardTitle, IList<IContactActionCardButton> buttons, List<string> npcNames = null);
+
+
 
         /// ======================================
         /// API for interacting with the smartphone messenger app
@@ -90,6 +147,10 @@ namespace SmartphoneAppMessenger
         /// <param name="notificationName">(optional) The name of the notification (shown on ingame notification HUD).</param>
         /// <param name="playerId">(optional) The target player's UniqueMultiplayerID as string. If null/empty/invalid, this is broadcast to all online players.</param>
         void SendSmartphoneNotification(string message, string notificationName = "", string playerId = "");
+
+
+
+
 
         /// ======================================
         /// API for capturing and accessing photos
@@ -119,6 +180,14 @@ namespace SmartphoneAppMessenger
         /// Gets all player photos as a dictionary of name and Texture2D.
         /// </summary>
         Dictionary<string, Texture2D> GetAllPlayerPhotoTextures();
+
+
+
+
+
+
+
+
 
         /// ======================================
         /// API to get phone appearance settings (theme and size).
@@ -200,6 +269,10 @@ namespace SmartphoneAppMessenger
         /// <returns>True if a button was clicked and handled, false otherwise.</returns>
         bool HandlePhoneAppBottomNavClick(int x, int y, int phoneX, int phoneY, Action? onBack = null);
 
+
+
+
+
         /// ======================================
         /// API for texture
         /// ======================================
@@ -260,15 +333,5 @@ namespace SmartphoneAppMessenger
         /// Gets the resolved 1x1 icon texture for an app.
         /// </summary>
         Texture2D? GetAppIconTexture(string appId);
-    }
-
-    public class SelectedPhotoResult
-    {
-        public string AbsolutePath { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
-        public string Tag { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
-        public string Timestamp { get; set; } = string.Empty;
-        public byte[]? TextureData { get; set; }
     }
 }

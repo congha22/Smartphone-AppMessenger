@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Smartphone;
 using StardewModdingAPI;
@@ -223,7 +224,7 @@ namespace SmartphoneAppMessenger
             helper.Events.GameLoop.TimeChanged += this.OnTimeChanged;
             helper.Events.GameLoop.Saving += this.OnSaving;
             helper.Events.GameLoop.OneSecondUpdateTicked += this.OnOneSecondUpdateTicked;
- 
+
             // Multiplayer chunked transfer events
             helper.Events.GameLoop.UpdateTicked += TransferManager.OnUpdateTicked;
             helper.Events.Multiplayer.ModMessageReceived += TransferManager.OnModMessageReceived;
@@ -263,7 +264,7 @@ namespace SmartphoneAppMessenger
             string summaryPath = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName(), "npc_conversation_summary.json");
             npcConversationSummary = this.Helper.Data.ReadJsonFile<Dictionary<string, string>>(summaryPath)
                 ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
- 
+
             string saveDir = System.IO.Path.Combine("userdata", MessageManager.GetActiveSaveFolderName());
             GiftMemories = this.Helper.Data.ReadJsonFile<Dictionary<string, GiftMemory>>(System.IO.Path.Combine(saveDir, "gift_memory.json"))
                 ?? new Dictionary<string, GiftMemory>(StringComparer.OrdinalIgnoreCase);
@@ -309,7 +310,7 @@ namespace SmartphoneAppMessenger
         private void OnDayEnding(object? sender, DayEndingEventArgs e)
         {
             ClearPendingQueuedChatReplies();
- 
+
             // gift memory
             var giftKeysToRemove = new List<string>();
             foreach (var entry in GiftMemories)
@@ -320,7 +321,7 @@ namespace SmartphoneAppMessenger
             }
             foreach (var key in giftKeysToRemove)
                 GiftMemories.Remove(key);
- 
+
             // event memory
             foreach (var evt in RecentEvents)
                 evt.DaysRemaining--;
@@ -415,6 +416,8 @@ namespace SmartphoneAppMessenger
                 return;
             }
 
+            iSmartphoneApi.ContactableNpcsChanged += MessageManager.UpdateAvailableNpcs;
+
 
             this.LoadIcons();
             this.RegisterMessengerApp();
@@ -488,6 +491,32 @@ namespace SmartphoneAppMessenger
             {
                 this.Monitor.Log("Failed to register Messenger app.", LogLevel.Warn);
             }
+
+            // Register Contact Action Card for Messenger
+            List<IContactActionCardButton> buttons = new List<IContactActionCardButton>
+            {
+                new ContactActionCardButton
+                {
+                    Text = "Chat",
+                    BackgroundColor = Color.SeaGreen,
+                    TextColor = Color.White,
+                    OnClick = (npcName) =>
+                    {
+                        if (iSmartphoneApi == null) return;
+                        MessageManager.UnreadCounts[npcName] = 0;
+                        Game1.activeClickableMenu = new MessengerChatScreen(
+                            iSmartphoneApi,
+                            npcName,
+                            () =>
+                            {
+                                MessageManager.UnreadCounts[npcName] = 0;
+                                Game1.activeClickableMenu = new MessengerAppScreen(iSmartphoneApi, () => iSmartphoneApi.OpenPhoneHomeScreen());
+                            }
+                        );
+                    }
+                }
+            };
+            iSmartphoneApi.RegisterContactActionCard(this.ModManifest.UniqueID, "Messenger", buttons);
         }
 
         private void OpenMessengerApp()

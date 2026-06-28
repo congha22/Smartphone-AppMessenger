@@ -55,11 +55,7 @@ namespace SmartphoneAppMessenger
                 }
             );
 
-            string[] npcRequirementValues =
-            {
-                ModConfig.NpcRequirementMeet,
-                ModConfig.NpcRequirementFriend
-            };
+
 
             string[] newMessageChanceValues =
             {
@@ -77,14 +73,7 @@ namespace SmartphoneAppMessenger
                 setValue: value => Config.Language = string.IsNullOrWhiteSpace(value) ? "English" : value.Trim()
             );
 
-            configMenu.AddTextOption(
-                mod: ModManifest,
-                name: () => "Who can message",
-                tooltip: () => "Friendship requirement for NPCs to message you.",
-                getValue: () => EnsureAllowedValue(Config.NpcMessageRequirement, ModConfig.NpcRequirementMeet, npcRequirementValues),
-                setValue: value => Config.NpcMessageRequirement = value,
-                allowedValues: npcRequirementValues
-            );
+
 
             configMenu.AddTextOption(
                 mod: ModManifest,
@@ -144,12 +133,7 @@ namespace SmartphoneAppMessenger
                 tooltip: () => "Configure message retention and photo limits."
             );
 
-            configMenu.AddPageLink(
-                mod: ModManifest,
-                pageId: "misc-settings",
-                text: () => "Miscellaneous",
-                tooltip: () => "Configure ignored NPCs and messaging chances."
-            );
+
 
             configMenu.AddPageLink(
                 mod: ModManifest,
@@ -233,16 +217,7 @@ namespace SmartphoneAppMessenger
                 max: 500
             );
 
-            // Miscellaneous page
-            configMenu.AddPage(mod: ModManifest, pageId: "misc-settings", pageTitle: () => "Miscellaneous");
 
-            configMenu.AddTextOption(
-                mod: ModManifest,
-                name: () => "Ignored NPCs",
-                tooltip: () => "Comma-separated list of NPCs who cannot chat.",
-                getValue: () => Config.IgnoredNpc ?? string.Empty,
-                setValue: value => Config.IgnoredNpc = value ?? string.Empty
-            );
 
 
             configMenu.AddPage(mod: ModManifest, pageId: "advance-settings", pageTitle: () => "Advance - Custom API");
