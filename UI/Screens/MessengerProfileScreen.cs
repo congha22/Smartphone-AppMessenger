@@ -225,15 +225,13 @@ namespace SmartphoneAppMessenger
             b.DrawString(Game1.dialogueFont, "Profile", new Vector2(titleX, titleY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
 
             Rectangle headerBounds = PhoneRect(50, 120, 500, 190);
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 headerBounds.X,
                 headerBounds.Y,
                 headerBounds.Width,
                 headerBounds.Height,
-                new Color(255, 255, 255, 230),
+                Color.LightGray,
                 1f,
                 false);
 
@@ -254,15 +252,13 @@ namespace SmartphoneAppMessenger
             }
             else
             {
-                IClickableMenu.drawTextureBox(
+                UI.CardDrawing.DrawCard(
                     b,
-                    Game1.menuTexture,
-                    new Rectangle(0, 256, 60, 60),
                     this.profileAvatarBounds.X,
                     this.profileAvatarBounds.Y,
                     this.profileAvatarBounds.Width,
                     this.profileAvatarBounds.Height,
-                    new Color(235, 235, 235, 220),
+                    Color.White,
                     1f,
                     false);
 
@@ -302,15 +298,13 @@ namespace SmartphoneAppMessenger
             int ageLabelY = PhoneY(315);
             b.DrawString(Game1.smallFont, "Age", new Vector2(fieldX, ageLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
             this.profileAgeFieldBounds = new Rectangle(fieldX, PhoneY(350), fieldWidth, fieldHeight);
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 this.profileAgeFieldBounds.X,
                 this.profileAgeFieldBounds.Y,
                 this.profileAgeFieldBounds.Width,
                 this.profileAgeFieldBounds.Height,
-                new Color(255, 255, 255, 230),
+                Color.White,
                 1f,
                 false);
             this.ageTextBox.Draw(
@@ -327,15 +321,13 @@ namespace SmartphoneAppMessenger
             this.profileBirthdayFieldBounds = new Rectangle(fieldX, PhoneY(450), birthdayInputWidth, fieldHeight);
             this.profileSeasonButtonBounds = new Rectangle(this.profileBirthdayFieldBounds.Right + ScaleValue(15), this.profileBirthdayFieldBounds.Y, seasonButtonWidth, fieldHeight);
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 this.profileBirthdayFieldBounds.X,
                 this.profileBirthdayFieldBounds.Y,
                 this.profileBirthdayFieldBounds.Width,
                 this.profileBirthdayFieldBounds.Height,
-                new Color(255, 255, 255, 230),
+                Color.White,
                 1f,
                 false);
 
@@ -346,15 +338,13 @@ namespace SmartphoneAppMessenger
                 this.activeProfileField == ProfileField.Birthday);
 
             // Season Button
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 this.profileSeasonButtonBounds.X,
                 this.profileSeasonButtonBounds.Y,
                 this.profileSeasonButtonBounds.Width,
                 this.profileSeasonButtonBounds.Height,
-                new Color(255, 255, 255, 230),
+                Color.White,
                 1f,
                 false);
 
@@ -384,15 +374,13 @@ namespace SmartphoneAppMessenger
             int descriptionLabelY = PhoneY(520);
             b.DrawString(Game1.smallFont, "About me", new Vector2(fieldX, descriptionLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
             this.profileDescriptionFieldBounds = new Rectangle(fieldX, PhoneY(555), fieldWidth, ScaleValue(285));
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 this.profileDescriptionFieldBounds.X,
                 this.profileDescriptionFieldBounds.Y,
                 this.profileDescriptionFieldBounds.Width,
                 this.profileDescriptionFieldBounds.Height,
-                new Color(255, 255, 255, 230),
+                Color.White,
                 1f,
                 false);
 
@@ -435,10 +423,8 @@ namespace SmartphoneAppMessenger
         private void DrawAvatarPicker(SpriteBatch b)
         {
             Rectangle panelBounds = PhoneRect(65, 180, 470, 600);
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 panelBounds.X,
                 panelBounds.Y,
                 panelBounds.Width,
@@ -481,15 +467,13 @@ namespace SmartphoneAppMessenger
                 panelBounds.Width - ScaleValue(60),
                 ScaleValue(330));
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 previewBounds.X,
                 previewBounds.Y,
                 previewBounds.Width,
                 previewBounds.Height,
-                new Color(255, 255, 255, 220),
+                Color.White,
                 1f,
                 false);
 
@@ -575,10 +559,8 @@ namespace SmartphoneAppMessenger
                     ScaleValue(132),
                     ScaleValue(46));
 
-                IClickableMenu.drawTextureBox(
+                UI.CardDrawing.DrawCard(
                     b,
-                    Game1.menuTexture,
-                    new Rectangle(0, 256, 60, 60),
                     this.avatarPickerToggleBounds.X,
                     this.avatarPickerToggleBounds.Y,
                     this.avatarPickerToggleBounds.Width,
@@ -603,15 +585,13 @@ namespace SmartphoneAppMessenger
                     1f);
             }
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 this.avatarPickerCancelBounds.X,
                 this.avatarPickerCancelBounds.Y,
                 this.avatarPickerCancelBounds.Width,
                 this.avatarPickerCancelBounds.Height,
-                new Color(255, 255, 255, 220),
+                Color.White,
                 1f,
                 false);
 
@@ -639,10 +619,8 @@ namespace SmartphoneAppMessenger
 
         private void DrawPickerNavButton(SpriteBatch b, Rectangle bounds, bool isNext)
         {
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 bounds.X,
                 bounds.Y,
                 bounds.Width,
@@ -672,8 +650,8 @@ namespace SmartphoneAppMessenger
                 ? new Color(95, 145, 185, 135)
                 : new Color(20, 20, 20, 110);
 
-            IClickableMenu.drawTextureBox(
-                b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+            UI.CardDrawing.DrawCard(
+                b,
                 bounds.X, bounds.Y, bounds.Width, bounds.Height,
                 boxColor, 1f, false);
 

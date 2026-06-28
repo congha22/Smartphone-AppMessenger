@@ -478,7 +478,7 @@ namespace SmartphoneAppMessenger
         private Rectangle GetMessageScrollArea()
         {
             Rectangle contentRect = GetContentBounds();
-            return new Rectangle(contentRect.X, this.yPositionOnScreen + ScaleValue(125), contentRect.Width, ScaleValue(715));
+            return new Rectangle(contentRect.X, this.yPositionOnScreen + ScaleValue(175), contentRect.Width, ScaleValue(715));
         }
 
         public override void draw(SpriteBatch b)
@@ -585,7 +585,7 @@ namespace SmartphoneAppMessenger
                     else if (bubble.Prefix == "PLAYER")
                     {
                         int boxX = scrollArea.Right - bubble.Width - ScaleValue(10);
-                        IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), boxX - ScaleValue(5), messageY, bubble.Width + ScaleValue(12), bubble.Height, new Color(255, 255, 255, 200), 1f, false);
+                        UI.CardDrawing.DrawCard(b, boxX - ScaleValue(5), messageY, bubble.Width + ScaleValue(12), bubble.Height, Color.LightGreen, 1f, false);
 
 
                         if (bubble.IsPhoto)
@@ -649,7 +649,7 @@ namespace SmartphoneAppMessenger
                     else // NPC
                     {
                         int boxX = scrollArea.Left + ScaleValue(10);
-                        IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), boxX - ScaleValue(5), messageY, bubble.Width + ScaleValue(12), bubble.Height, new Color(255, 255, 255, 200), 1f, false);
+                        UI.CardDrawing.DrawCard(b, boxX - ScaleValue(5), messageY, bubble.Width + ScaleValue(12), bubble.Height, Color.Silver, 1f, false);
 
 
                         if (bubble.IsPhoto)
@@ -729,20 +729,17 @@ namespace SmartphoneAppMessenger
             // --- Draw Inputs ---
             if (this.hiButton != null)
             {
-                IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), this.hiButton.bounds.X, this.hiButton.bounds.Y, this.hiButton.bounds.Width, this.hiButton.bounds.Height, Color.White, 1f, false);
+                UI.CardDrawing.DrawCard(b, this.hiButton.bounds.X, this.hiButton.bounds.Y, this.hiButton.bounds.Width, this.hiButton.bounds.Height, Color.LightGray, 1f, false);
                 Vector2 hiSize = Game1.smallFont.MeasureString(this.hiButton.name) * this.phoneUiScale;
                 b.DrawString(Game1.smallFont, this.hiButton.name, new Vector2((int)(this.hiButton.bounds.Center.X - hiSize.X / 2), (int)(this.hiButton.bounds.Center.Y - hiSize.Y / 2)), Game1.textColor, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
             }
             else if (!this.chatInputBounds.IsEmpty && this.sendButton != null)
             {
                 // Draw toggle button (the arrow)
-                IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
-
+                UI.CardDrawing.DrawCard(b,
                     this.chatAttachmentButtonBounds.X, this.chatAttachmentButtonBounds.Y,
-
                     this.chatAttachmentButtonBounds.Width, this.chatAttachmentButtonBounds.Height,
-
-                    Color.White, 1f, false);
+                    Color.LightGray, 1f, false);
 
 
                 Rectangle arrowSource = this.isAttachmentMenuOpen
@@ -840,8 +837,7 @@ namespace SmartphoneAppMessenger
 
                     // Panel background
 
-                    IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
-
+                    UI.CardDrawing.DrawCard(b,
                         panelX, panelY, panelWidth, panelHeight, new Color(255, 255, 255, 240), 1f, false);
 
 
@@ -877,7 +873,7 @@ namespace SmartphoneAppMessenger
                 }
 
                 // Input box
-                IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), this.chatInputBounds.X, this.chatInputBounds.Y, this.chatInputBounds.Width, this.chatInputBounds.Height, Color.White, 1f, false);
+                UI.CardDrawing.DrawCard(b, this.chatInputBounds.X, this.chatInputBounds.Y, this.chatInputBounds.Width, this.chatInputBounds.Height, Color.White, 1f, false);
                 this.chatTextBox.Draw(b, this.chatInputBounds, this.phoneUiScale, true);
                 this.sendButton.draw(b);
             }
@@ -1369,10 +1365,8 @@ namespace SmartphoneAppMessenger
                 ? new Color(205, 235, 255, 235)
                 : new Color(255, 255, 255, 220);
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 bounds.X,
                 bounds.Y,
                 bounds.Width,
@@ -1414,13 +1408,11 @@ namespace SmartphoneAppMessenger
             int badgeCount)
         {
             Color boxColor = active
-                ? new Color(205, 235, 255, 235)
-                : new Color(255, 255, 255, 220);
+                ? Color.LightBlue
+                : Color.LightGray;
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 bounds.X,
                 bounds.Y,
                 bounds.Width,

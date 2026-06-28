@@ -343,15 +343,13 @@ namespace SmartphoneAppMessenger
             Rectangle searchBox = GetSearchBoxBounds();
 
             // Draw textbox background
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 searchBox.X,
                 searchBox.Y,
                 searchBox.Width,
                 searchBox.Height,
-                Color.White,
+                Color.LightCyan,
                 1f,
                 false);
 
@@ -456,10 +454,8 @@ namespace SmartphoneAppMessenger
                     else
                     {
                         // Draw player initials as fallback inside a nice background box
-                        IClickableMenu.drawTextureBox(
+                        UI.CardDrawing.DrawCard(
                             b,
-                            Game1.menuTexture,
-                            new Rectangle(0, 256, 60, 60),
                             portraitDest.X,
                             portraitDest.Y,
                             portraitDest.Width,

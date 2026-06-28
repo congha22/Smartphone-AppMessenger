@@ -49,8 +49,8 @@ namespace SmartphoneAppMessenger
             }
 
             // Draw a subtle border frame to match the phone theme
-            IClickableMenu.drawTextureBox(
-                b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+            UI.CardDrawing.DrawCard(
+                b,
                 rect.X, rect.Y, rect.Width, rect.Height,
                 Color.White * 0.5f, 0.5f, false);
 

@@ -457,10 +457,8 @@ namespace SmartphoneAppMessenger
             b.Draw(Game1.staminaRect, GetUiViewportBounds(), Color.Black * 0.35f);
 
             Rectangle panelBounds = PhoneRect(65, 180, 470, 600);
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 panelBounds.X,
                 panelBounds.Y,
                 panelBounds.Width,
@@ -496,10 +494,8 @@ namespace SmartphoneAppMessenger
                 panelBounds.Y + ScaleValue(80),
                 panelBounds.Width - ScaleValue(60),
                 ScaleValue(330));
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 previewBounds.X,
                 previewBounds.Y,
                 previewBounds.Width,
@@ -571,10 +567,8 @@ namespace SmartphoneAppMessenger
                     previewBounds.Bottom + ScaleValue(18),
                     ScaleValue(132),
                     ScaleValue(46));
-                IClickableMenu.drawTextureBox(
+                UI.CardDrawing.DrawCard(
                     b,
-                    Game1.menuTexture,
-                    new Rectangle(0, 256, 60, 60),
                     this.chatPhotoPickerToggleBounds.X,
                     this.chatPhotoPickerToggleBounds.Y,
                     this.chatPhotoPickerToggleBounds.Width,
@@ -595,10 +589,8 @@ namespace SmartphoneAppMessenger
                     Color.Black);
             }
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 this.chatPhotoPickerCancelBounds.X,
                 this.chatPhotoPickerCancelBounds.Y,
                 this.chatPhotoPickerCancelBounds.Width,
@@ -837,10 +829,8 @@ namespace SmartphoneAppMessenger
             x = Math.Clamp(x, 12, maxX);
             y = Math.Clamp(y, 12, maxY);
 
-            IClickableMenu.drawTextureBox(
+            UI.CardDrawing.DrawCard(
                 b,
-                Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
                 x,
                 y,
                 boxWidth,

@@ -241,6 +241,13 @@ namespace SmartphoneAppMessenger
         Texture2D? GetPhoneBackgroundTexture();
 
         /// <summary>
+        /// Gets the phone card texture (card_texture.png) from the currently active theme.
+        /// This is the background drawn behind info cards.
+        /// </summary>
+        /// <returns>The phone card Texture2D, or null if textures are not loaded.</returns>
+        Texture2D? GetCardTexture();
+
+        /// <summary>
         /// Gets the current on-screen position (top-left corner) of the phone menu.
         /// Use this to open a custom app screen at the same position the phone was at,
         /// so the transition feels seamless.
