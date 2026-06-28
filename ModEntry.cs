@@ -781,12 +781,6 @@ namespace SmartphoneAppMessenger
             return ModEntry.UnregisterUnlimitedEventInternal(ownerModId, eventType);
         }
 
-        public List<string> GetPhoneNpcList(string playerId = "")
-        {
-            // Only returns the list for the current player for now, since it is a local mod
-            return MessageManager.GetAvailableNpcNames();
-        }
-
         public void SendSmartphoneMessageFromNPC(string npcName, string message, string playerId = "")
         {
             if (string.IsNullOrWhiteSpace(npcName) || string.IsNullOrWhiteSpace(message))

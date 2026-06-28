@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Smartphone;
 using StardewValley;
 using StardewValley.Menus;
 
@@ -11,9 +12,13 @@ namespace SmartphoneAppMessenger
 {
     public static class MessengerWidget
     {
+        private static Texture2D? widgetTexture2x1;
+        private static Texture2D? widgetTexture2x2;
+        private static string? lastIconStyle;
+
         public static void Draw(SpriteBatch b, Rectangle rect, AppSize size, Texture2D appIcon, Texture2D? appBackgroundTexture, ISmartPhoneApi api, string compositeId)
         {
-            // Default 1x1 size: draw normal icon
+            // --- 1x1 Size: Works as it is (just an icon) ---
             if (size == AppSize.Size1x1 || appIcon == null)
             {
                 Texture2D? currentIcon = null;
@@ -37,24 +42,62 @@ namespace SmartphoneAppMessenger
                 return;
             }
 
-            // Draw widget background (Messenger style)
-            if (appBackgroundTexture != null && !appBackgroundTexture.IsDisposed)
+            // --- Optimized Dynamic Asset Caching Mechanism ---
+            string currentStyle = "default";
+            if (api != null)
             {
-                b.Draw(appBackgroundTexture, rect, Color.White);
+                try
+                {
+                    Texture2D? currentIcon = api.GetAppIconTexture(compositeId);
+                    if (currentIcon != null && currentIcon.Name != null && currentIcon.Name.Contains("v2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentStyle = "v2";
+                    }
+                }
+                catch { }
+            }
+
+            if (lastIconStyle != currentStyle)
+            {
+                lastIconStyle = currentStyle;
+                try { widgetTexture2x1?.Dispose(); widgetTexture2x1 = null; } catch { }
+                try { widgetTexture2x2?.Dispose(); widgetTexture2x2 = null; } catch { }
+
+                try
+                {
+                    string path2x1 = $"assets/{currentStyle}/2x1.png";
+                    widgetTexture2x1 = ModEntry.Instance.Helper.ModContent.Load<Texture2D>(path2x1);
+                }
+                catch { }
+
+                try
+                {
+                    string path2x2 = $"assets/{currentStyle}/2x2.png";
+                    widgetTexture2x2 = ModEntry.Instance.Helper.ModContent.Load<Texture2D>(path2x2);
+                }
+                catch { }
+            }
+
+            // Determine appropriate cached background texture to draw
+            Texture2D? bgTex = null;
+            if (size == AppSize.Size2x1 && widgetTexture2x1 != null && !widgetTexture2x1.IsDisposed)
+                bgTex = widgetTexture2x1;
+            else if (size == AppSize.Size2x2 && widgetTexture2x2 != null && !widgetTexture2x2.IsDisposed)
+                bgTex = widgetTexture2x2;
+            else if (appBackgroundTexture != null && !appBackgroundTexture.IsDisposed)
+                bgTex = appBackgroundTexture;
+
+            if (bgTex != null)
+            {
+                b.Draw(bgTex, rect, Color.White);
             }
             else
             {
-                // Fallback elegant dark blue/teal slate color matching Messenger style
-                b.Draw(Game1.staminaRect, rect, new Color(30, 45, 70));
+                // Fallback clean light-gray theme canvas
+                b.Draw(Game1.staminaRect, rect, new Color(242, 242, 242));
             }
 
-            // Draw a subtle border frame to match the phone theme
-            UI.CardDrawing.DrawCard(
-                b,
-                rect.X, rect.Y, rect.Width, rect.Height,
-                Color.White * 0.5f, 0.5f, false);
-
-            // Find the most recently active contact
+            // --- Find and rank conversations with new unread messages ---
             var allNpcNames = MessageManager.GetAvailableNpcNames();
             var onlinePlayers = Game1.getOnlineFarmers()
                 .Select(f => f.Name)
@@ -68,84 +111,112 @@ namespace SmartphoneAppMessenger
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var latestContact = allContacts
+            var newMcs = allContacts
                 .Where(name => !string.Equals(name, Game1.player.Name, StringComparison.OrdinalIgnoreCase))
+                .Where(name => MessageManager.UnreadCounts.TryGetValue(name, out int count) && count > 0)
                 .OrderByDescending(name => MessageManager.LatestMessageTimestamps.TryGetValue(name, out int ts) ? ts : 0)
-                .FirstOrDefault();
+                .ToList();
 
-            var messages = latestContact != null ? MessageManager.GetMessagesForNpc(latestContact) : null;
-            var latestMessage = messages?.LastOrDefault();
+            // Handle scenario where there are no unread messages
+            float uiScale = api?.GetPhoneUiScale() ?? 1f;
 
-            if (latestContact == null || latestMessage == null)
+            if (newMcs.Count == 0)
             {
-                // Draw no messages text beautifully centered
-                string text = "No messages yet.";
-                Vector2 textSize = Game1.smallFont.MeasureString(text) * 0.75f;
-                b.DrawString(Game1.smallFont, text, new Vector2(rect.X + (rect.Width - textSize.X) / 2f, rect.Y + (rect.Height - textSize.Y) / 2f), Color.White * 0.8f, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 1f);
+                string noMsgText = "No new messages.";
+                float noMsgScale = 0.85f * uiScale;
+                Vector2 textSize = Game1.smallFont.MeasureString(noMsgText) * noMsgScale;
+                b.DrawString(
+                    Game1.smallFont,
+                    noMsgText,
+                    new Vector2(rect.X + (rect.Width - textSize.X) / 2f, rect.Y + (rect.Height - textSize.Y) / 2f),
+                    Color.Black,
+                    0f,
+                    Vector2.Zero,
+                    noMsgScale,
+                    SpriteEffects.None,
+                    1f
+                );
                 return;
             }
 
-            bool isPlayer = Game1.getOnlineFarmers().Any(f => string.Equals(f.Name, latestContact, StringComparison.OrdinalIgnoreCase))
-                            || MessageManager.PlayerConversations.ContainsKey(latestContact);
+            int actorIconSize = (int)Math.Round(38 * uiScale); // Upgraded portrait layout footprint bounding size
 
-            NPC? npc = isPlayer ? null : Game1.getCharacterFromName(latestContact);
-            string displayName = npc?.displayName ?? latestContact;
-
-            // Draw widget content depending on size
+            // --- Draw layout rows based on active widget size ---
             if (size == AppSize.Size2x1)
             {
-                int iconPadding = 6;
-                int actorIconSize = 28;
-                Rectangle actorBounds = new Rectangle(rect.X + iconPadding, rect.Y + (rect.Height - actorIconSize) / 2, actorIconSize, actorIconSize);
-                DrawWidgetActorIcon(b, latestContact, isPlayer, npc, actorBounds);
-
-                // Author name
-                Vector2 nameSize = Game1.smallFont.MeasureString(displayName) * 0.7f;
-                b.DrawString(Game1.smallFont, displayName, new Vector2(actorBounds.Right + 6, rect.Y + 4), Color.White, 0f, Vector2.Zero, 0.7f, SpriteEffects.None, 1f);
-
-                // Draw snippet of latest message text
-                string snippet = CleanPrefixes(latestMessage, latestContact);
-                if (!string.IsNullOrWhiteSpace(snippet))
-                {
-                    if (snippet.Length > 20) snippet = snippet.Substring(0, 18) + "...";
-                    b.DrawString(Game1.smallFont, snippet, new Vector2(actorBounds.Right + 6, rect.Y + 4 + nameSize.Y + 2), Color.LightGray * 0.9f, 0f, Vector2.Zero, 0.65f, SpriteEffects.None, 1f);
-                }
+                int yPos = rect.Y + (rect.Height - actorIconSize) / 2;
+                DrawContactRow(b, rect, size, newMcs[0], yPos, actorIconSize, uiScale);
             }
             else
             {
-                // For 2x2 or larger sizes
-                int pad = 8;
-                int actorIconSize = 32;
-                Rectangle actorBounds = new Rectangle(rect.X + pad, rect.Y + pad, actorIconSize, actorIconSize);
-                DrawWidgetActorIcon(b, latestContact, isPlayer, npc, actorBounds);
-
-                // Draw unread counts on the top-right of portrait if there are unread messages
-                if (MessageManager.UnreadCounts.TryGetValue(latestContact, out int unreadCount) && unreadCount > 0)
+                // Size 2x2: Displays up to 2 items
+                if (newMcs.Count == 1)
                 {
-                    string numberStr = Math.Min(unreadCount, 9).ToString();
-                    Rectangle badgeBounds = new Rectangle(actorBounds.Right - 8, actorBounds.Y - 6, 14, 14);
-                    b.Draw(Game1.staminaRect, badgeBounds, new Color(215, 48, 48, 235));
-
-                    Vector2 numSize = Game1.smallFont.MeasureString(numberStr) * 0.5f;
-                    Vector2 numPos = new Vector2(
-                        badgeBounds.X + (badgeBounds.Width - numSize.X) / 2f,
-                        badgeBounds.Y + (badgeBounds.Height - numSize.Y) / 2f);
-                    b.DrawString(Game1.smallFont, numberStr, numPos, Color.White, 0f, Vector2.Zero, 0.5f, SpriteEffects.None, 1f);
+                    // Perfectly centered vertically if only 1 NPC has new incoming messages (shifted up slightly for balance)
+                    int yPos = rect.Y + (rect.Height - actorIconSize) / 2 - (int)Math.Round(10 * uiScale);
+                    DrawContactRow(b, rect, size, newMcs[0], yPos, actorIconSize, uiScale);
                 }
-
-                // Author name
-                b.DrawString(Game1.smallFont, displayName, new Vector2(actorBounds.Right + 6, rect.Y + pad + 2), Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 1f);
-
-                // Draw message text snippet wrapped
-                string snippet = CleanPrefixes(latestMessage, latestContact);
-                int wrapWidth = (int)((rect.Width - pad * 2) / 0.65f);
-                List<string> wrappedLines = SplitTextIntoLines(snippet, Game1.smallFont, wrapWidth);
-                int yCursor = actorBounds.Bottom + 6;
-                int maxLines = (rect.Height - yCursor - 8) / 14;
-                for (int i = 0; i < wrappedLines.Count && i < maxLines; i++)
+                else
                 {
-                    b.DrawString(Game1.smallFont, wrappedLines[i], new Vector2(rect.X + pad, yCursor), Color.LightGray, 0f, Vector2.Zero, 0.65f, SpriteEffects.None, 1f);
-                    yCursor += 14;
+                    // Symmetrically stacked row layout with adjusted spacing
+                    int halfHeight = rect.Height / 2;
+                    int y1 = rect.Y + (halfHeight - actorIconSize) / 2 - (int)Math.Round(8 * uiScale);
+                    int y2 = rect.Y + halfHeight + (halfHeight - actorIconSize) / 2 - (int)Math.Round(22 * uiScale);
+
+                    DrawContactRow(b, rect, size, newMcs[0], y1, actorIconSize, uiScale);
+                    DrawContactRow(b, rect, size, newMcs[1], y2, actorIconSize, uiScale);
+
+                    // Draw a thin black line at the middle
+                    int linePadding = (int)Math.Round(8 * uiScale);
+                    int lineWidth = (int)Math.Round(1 * uiScale);
+                    b.Draw(Game1.staminaRect, new Rectangle(rect.X + linePadding, rect.Y + halfHeight, rect.Width - (linePadding * 2), lineWidth), Color.Black);
+                }
+            }
+        }
+
+        private static void DrawContactRow(SpriteBatch b, Rectangle rect, AppSize size, string contactName, int yPos, int actorIconSize, float uiScale)
+        {
+            bool isPlayer = Game1.getOnlineFarmers().Any(f => string.Equals(f.Name, contactName, StringComparison.OrdinalIgnoreCase))
+                            || MessageManager.PlayerConversations.ContainsKey(contactName);
+
+            NPC? npc = isPlayer ? null : Game1.getCharacterFromName(contactName);
+            string displayName = npc?.displayName ?? contactName;
+
+            int iconPadding = (int)Math.Round(8 * uiScale);
+            Rectangle actorBounds = new Rectangle(rect.X + iconPadding, yPos, actorIconSize, actorIconSize);
+            DrawWidgetActorIcon(b, contactName, isPlayer, npc, actorBounds, uiScale);
+
+            // --- Number badge removed completely as requested ---
+
+            float nameScale = 0.85f * uiScale;
+            float textScale = 0.7f * uiScale;
+            Vector2 nameSize = Game1.smallFont.MeasureString(displayName) * nameScale;
+            int textX = actorBounds.Right + (int)Math.Round(8 * uiScale);
+            int nameY = (size == AppSize.Size2x1) ? (rect.Y + (int)Math.Round(6 * uiScale)) : actorBounds.Y;
+
+            // Draw Display Name in solid crisp Black text color
+            b.DrawString(Game1.smallFont, displayName, new Vector2(textX, nameY), Color.Black, 0f, Vector2.Zero, nameScale, SpriteEffects.None, 1f);
+
+            // Fetch text content string, clean system flags, word wrap and clip to max 2 lines
+            var messages = MessageManager.GetMessagesForNpc(contactName);
+            var latestMessage = messages?.LastOrDefault();
+            string snippet = latestMessage != null ? CleanPrefixes(latestMessage, contactName) : "";
+
+            if (!string.IsNullOrWhiteSpace(snippet))
+            {
+                int wrapWidth = (int)((rect.Right - textX - (int)Math.Round(8 * uiScale)) / textScale);
+                List<string> wrappedLines = SplitTextIntoLines(snippet, Game1.smallFont, wrapWidth);
+
+                int yCursor = nameY + (int)nameSize.Y + (int)Math.Round(2 * uiScale);
+                int linesDrawn = 0;
+                for (int i = 0; i < wrappedLines.Count && linesDrawn < 2; i++)
+                {
+                    if (yCursor + (int)Math.Round(12 * uiScale) <= rect.Bottom)
+                    {
+                        b.DrawString(Game1.smallFont, wrappedLines[i], new Vector2(textX, yCursor), Color.Gray, 0f, Vector2.Zero, textScale, SpriteEffects.None, 1f);
+                        yCursor += (int)(Game1.smallFont.MeasureString(wrappedLines[i]).Y * textScale) - (int)Math.Round(1 * uiScale);
+                        linesDrawn++;
+                    }
                 }
             }
         }
@@ -162,7 +233,7 @@ namespace SmartphoneAppMessenger
             return message;
         }
 
-        private static void DrawWidgetActorIcon(SpriteBatch b, string name, bool isPlayer, NPC? npc, Rectangle bounds)
+        private static void DrawWidgetActorIcon(SpriteBatch b, string name, bool isPlayer, NPC? npc, Rectangle bounds, float uiScale)
         {
             if (!isPlayer && npc?.Portrait != null)
             {
@@ -185,11 +256,11 @@ namespace SmartphoneAppMessenger
             if (!string.IsNullOrWhiteSpace(name))
                 fallbackLetter = name.Trim()[0].ToString().ToUpperInvariant();
 
-            Vector2 letterSize = Game1.smallFont.MeasureString(fallbackLetter) * 0.75f;
+            Vector2 letterSize = Game1.smallFont.MeasureString(fallbackLetter) * 0.75f * uiScale;
             Vector2 letterPos = new Vector2(
                 bounds.X + (bounds.Width - letterSize.X) / 2f,
                 bounds.Y + (bounds.Height - letterSize.Y) / 2f);
-            b.DrawString(Game1.smallFont, fallbackLetter, letterPos, Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 1f);
+            b.DrawString(Game1.smallFont, fallbackLetter, letterPos, Color.White, 0f, Vector2.Zero, 0.75f * uiScale, SpriteEffects.None, 1f);
         }
 
         private static List<string> SplitTextIntoLines(string text, SpriteFont font, int maxWidth)

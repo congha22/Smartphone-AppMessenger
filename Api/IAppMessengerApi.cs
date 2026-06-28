@@ -66,13 +66,6 @@ namespace SmartphoneAppMessenger
         bool UnregisterUnlimitedEvent(string ownerModId, string eventType);
 
         /// <summary>
-        /// Gets a list of NPCs that have appear in the messenger app for a specific player.
-        /// </summary>
-        /// <param name="playerId">(optional) The target player's UniqueMultiplayerID as string. If provided and not a valid online player ID, returns an empty list.</param>
-        /// <returns>A list of NPC names.</returns>
-        List<string> GetPhoneNpcList(string playerId = "");
-
-        /// <summary>
         /// Sends a message from an NPC to the player. This method is used to simulate receiving messages on the player's smartphone from NPCs in the game. Nothing will happen if the specified NPC is not in the messenger app list.
         /// </summary>
         /// <param name="npcName">The name of the NPC sending the message (case-sensitive).</param>
