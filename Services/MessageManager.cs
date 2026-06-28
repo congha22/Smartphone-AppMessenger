@@ -52,7 +52,7 @@ namespace SmartphoneAppMessenger
                     UnreadCounts[npcName] = 0;
                 UnreadCounts[npcName] = Math.Min(9, UnreadCounts[npcName] + 1);
 
-                bool isChatScreenOpenForNpc = Game1.activeClickableMenu is MessengerChatScreen chatScreen 
+                bool isChatScreenOpenForNpc = Game1.activeClickableMenu is MessengerChatScreen chatScreen
                                               && string.Equals(chatScreen.npcName, npcName, StringComparison.OrdinalIgnoreCase);
 
                 if (!isChatScreenOpenForNpc)
@@ -194,10 +194,8 @@ namespace SmartphoneAppMessenger
             currentPlayerAge = "Adult";
             currentPlayerBirthDate = "1";
             currentPlayerBirthSeason = "Spring";
-            currentPlayerProfile = "";
-            currentPlayerAvatar = "";
 
-            if (!Context.IsWorldReady)
+            if (!Context.IsWorldReady || Game1.player == null)
                 return;
 
             string filePath = Path.Combine("userdata", GetActiveSaveFolderName(), "player_profile.json");
@@ -209,20 +207,29 @@ namespace SmartphoneAppMessenger
                     currentPlayerAge = string.IsNullOrWhiteSpace(loaded.Age) ? "Adult" : loaded.Age;
                     currentPlayerBirthDate = string.IsNullOrWhiteSpace(loaded.BirthDate) ? "1" : loaded.BirthDate;
                     currentPlayerBirthSeason = string.IsNullOrWhiteSpace(loaded.BirthSeason) ? "Spring" : loaded.BirthSeason;
-                    currentPlayerProfile = loaded.Profile ?? "";
-                    currentPlayerAvatar = loaded.AvatarPath ?? "";
                 }
             }
             catch (Exception ex)
             {
                 ModEntry.Instance.Monitor.Log($"Failed to load player_profile.json: {ex}", LogLevel.Error);
             }
+
+            string modId = ModEntry.Instance.ModManifest.UniqueID;
+            Game1.player.modData[$"{modId}/Age"] = currentPlayerAge;
+            Game1.player.modData[$"{modId}/BirthDate"] = currentPlayerBirthDate;
+            Game1.player.modData[$"{modId}/BirthSeason"] = currentPlayerBirthSeason;
         }
 
         public static void SavePlayerProfile(IModHelper helper)
         {
-            if (!Context.IsWorldReady)
+            if (!Context.IsWorldReady || Game1.player == null)
                 return;
+
+            string modId = ModEntry.Instance.ModManifest.UniqueID;
+
+            Game1.player.modData[$"{modId}/Age"] = currentPlayerAge;
+            Game1.player.modData[$"{modId}/BirthDate"] = currentPlayerBirthDate;
+            Game1.player.modData[$"{modId}/BirthSeason"] = currentPlayerBirthSeason;
 
             try
             {

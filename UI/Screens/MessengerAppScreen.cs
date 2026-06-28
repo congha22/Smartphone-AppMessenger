@@ -521,19 +521,38 @@ namespace SmartphoneAppMessenger
                 int buttonSize = ScaleValue(31);
                 int buttonY = actualBounds.Center.Y - (buttonSize / 2);
 
-                int profileButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
-                Rectangle profileButtonBounds = new Rectangle(profileButtonX, buttonY, buttonSize, buttonSize);
+                var socialApi = ModEntry.Instance.Helper.ModRegistry.GetApi<IStardewSocialApi>("d5a1lamdtd.Smartphone-AppStardewSocial");
 
-                int heartButtonX = profileButtonX - ScaleValue(8) - buttonSize;
-                Rectangle heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+                Rectangle profileButtonBounds = Rectangle.Empty;
+                Rectangle heartButtonBounds = Rectangle.Empty;
 
-                // Heart Button
-                bool isFavourited = MessageManager.FavouriteNpcs.Contains(npcName);
-                Rectangle heartSource = isFavourited ? new Rectangle(211, 428, 7, 7) : new Rectangle(218, 428, 7, 7);
-                b.Draw(Game1.mouseCursors, heartButtonBounds, heartSource, Color.White);
+                if (socialApi != null)
+                {
+                    int profileButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
+                    profileButtonBounds = new Rectangle(profileButtonX, buttonY, buttonSize, buttonSize);
 
-                // Profile Button (dummy magnifier glass directly drawn, no background)
-                b.Draw(Game1.mouseCursors, profileButtonBounds, new Rectangle(80, 0, 13, 13), Color.White);
+                    int heartButtonX = profileButtonX - ScaleValue(8) - buttonSize;
+                    heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+
+                    // Heart Button
+                    bool isFavourited = MessageManager.FavouriteNpcs.Contains(npcName);
+                    Rectangle heartSource = isFavourited ? new Rectangle(211, 428, 7, 7) : new Rectangle(218, 428, 7, 7);
+                    b.Draw(Game1.mouseCursors, heartButtonBounds, heartSource, Color.White);
+
+                    // Profile Button (dummy magnifier glass directly drawn, no background)
+                    b.Draw(Game1.mouseCursors, profileButtonBounds, new Rectangle(80, 0, 13, 13), Color.White);
+                }
+                else
+                {
+                    // If Stardew Social is not installed, hide profile button and shift heart button to the rightmost position
+                    int heartButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
+                    heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+
+                    // Heart Button
+                    bool isFavourited = MessageManager.FavouriteNpcs.Contains(npcName);
+                    Rectangle heartSource = isFavourited ? new Rectangle(211, 428, 7, 7) : new Rectangle(218, 428, 7, 7);
+                    b.Draw(Game1.mouseCursors, heartButtonBounds, heartSource, Color.White);
+                }
             }
         }
 
@@ -886,14 +905,27 @@ namespace SmartphoneAppMessenger
 
                         if (actualBounds.Contains(x, y))
                         {
+                            var socialApi = ModEntry.Instance.Helper.ModRegistry.GetApi<IStardewSocialApi>("d5a1lamdtd.Smartphone-AppStardewSocial");
+
                             int buttonSize = ScaleValue(31);
                             int buttonY = actualBounds.Center.Y - (buttonSize / 2);
 
-                            int profileButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
-                            Rectangle profileButtonBounds = new Rectangle(profileButtonX, buttonY, buttonSize, buttonSize);
+                            Rectangle profileButtonBounds = Rectangle.Empty;
+                            Rectangle heartButtonBounds = Rectangle.Empty;
 
-                            int heartButtonX = profileButtonX - ScaleValue(8) - buttonSize;
-                            Rectangle heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+                            if (socialApi != null)
+                            {
+                                int profileButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
+                                profileButtonBounds = new Rectangle(profileButtonX, buttonY, buttonSize, buttonSize);
+
+                                int heartButtonX = profileButtonX - ScaleValue(8) - buttonSize;
+                                heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+                            }
+                            else
+                            {
+                                int heartButtonX = actualBounds.Right - ScaleValue(10) - buttonSize;
+                                heartButtonBounds = new Rectangle(heartButtonX, buttonY, buttonSize, buttonSize);
+                            }
 
                             if (heartButtonBounds.Contains(x, y))
                             {
@@ -913,9 +945,10 @@ namespace SmartphoneAppMessenger
                                 return;
                             }
 
-                            if (profileButtonBounds.Contains(x, y))
+                            if (socialApi != null && profileButtonBounds.Contains(x, y))
                             {
                                 Game1.playSound("smallSelect");
+                                socialApi.OpenProfile(npcName);
                                 return;
                             }
 
