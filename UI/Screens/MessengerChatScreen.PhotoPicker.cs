@@ -233,7 +233,7 @@ namespace SmartphoneAppMessenger
                                 if (string.IsNullOrEmpty(extension)) extension = ".jpg";
                                 string destFileName = Guid.NewGuid().ToString("N") + extension;
                                 string destPath = Path.Combine(photoSharedDir, destFileName);
-                                
+
                                 File.WriteAllBytes(destPath, result.TextureData);
 
                                 string relativePath = "photo_shared/" + destFileName;
@@ -298,35 +298,6 @@ namespace SmartphoneAppMessenger
             }
         }
 
-        private void EnsureChatPhotoCandidatesLoaded()
-        {
-            this.chatPhotoCandidates.Clear();
-
-            if (iSmartphoneApi != null)
-            {
-                string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
-                string activeSave = MessageManager.GetActiveSaveFolderName();
-                string photoPlayerDir = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player");
-
-                var names = iSmartphoneApi.GetPlayerPhotoNames();
-                if (names != null)
-                {
-                    foreach (var name in names)
-                    {
-                        string absolutePath = Path.Combine(photoPlayerDir, name);
-                        this.chatPhotoCandidates.Add(absolutePath);
-                    }
-                }
-            }
-
-            if (this.chatPhotoCandidates.Count == 0)
-                this.chatPhotoCandidateIndex = -1;
-            else
-                this.chatPhotoCandidateIndex = Math.Clamp(this.chatPhotoCandidateIndex, 0, this.chatPhotoCandidates.Count - 1);
-
-            this.chatSelectedPhotos.RemoveAll(selectedPath =>
-                !this.chatPhotoCandidates.Any(candidate => string.Equals(candidate, selectedPath, StringComparison.OrdinalIgnoreCase)));
-        }
 
         private void MoveChatPhotoCandidate(int delta)
         {

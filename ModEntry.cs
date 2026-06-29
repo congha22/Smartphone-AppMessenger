@@ -446,7 +446,7 @@ namespace SmartphoneAppMessenger
                     this.Monitor.Log($"Failed to load v2 theme icon: {ex.Message}", LogLevel.Error);
                 }
 
-                string iconPath = Config.AppIconStyle == "v2" ? "assets/v2/1x1.png" : "assets/default/1x1.png";
+                string iconPath = "assets/default/1x1.png";
                 this.appIcon = this.Helper.ModContent.Load<Texture2D>(iconPath);
                 PortraitBackgroundTexture = this.Helper.ModContent.Load<Texture2D>("assets/background.png");
             }

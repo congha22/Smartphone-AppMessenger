@@ -93,39 +93,6 @@ namespace SmartphoneAppMessenger
             return false;
         }
 
-        private void EnsureAvatarPhotoCandidatesLoaded()
-        {
-            this.avatarPhotoCandidates.Clear();
-            if (this.smartphoneApi != null)
-            {
-                string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
-                string activeSave = MessageManager.GetActiveSaveFolderName();
-                string photoPlayerDir = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player");
-
-                var names = this.smartphoneApi.GetPlayerPhotoNames();
-                if (names != null)
-                {
-                    foreach (var name in names)
-                    {
-                        string absolutePath = Path.Combine(photoPlayerDir, name);
-                        if (TryGetImageTexture(absolutePath, out Texture2D tex))
-                        {
-                            float ratio = (float)tex.Width / tex.Height;
-                            if (ratio > 0.95f && ratio < 1.05f)
-                            {
-                                this.avatarPhotoCandidates.Add(absolutePath);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (this.avatarPhotoCandidates.Count == 0)
-                this.avatarPhotoCandidateIndex = -1;
-            else
-                this.avatarPhotoCandidateIndex = Math.Clamp(this.avatarPhotoCandidateIndex, 0, this.avatarPhotoCandidates.Count - 1);
-        }
-
         private void OpenProfileEditor()
         {
             this.currentState = ScreenState.ProfileEditor;

@@ -15,6 +15,7 @@ namespace SmartphoneAppMessenger
         Setting,
         Calendar
     }
+
     public enum AppSize
     {
         Size1x1,
@@ -26,7 +27,6 @@ namespace SmartphoneAppMessenger
         Size4x3,
         Size4x4,
     }
-
 
     public class SelectedPhotoResult
     {
@@ -56,9 +56,9 @@ namespace SmartphoneAppMessenger
 
     public interface ISmartPhoneApi
     {
-        /// ======================================
-        /// API to register custom apps or app groups on the smartphone home screen.
-        /// ======================================
+        // =========================================================
+        // 1. App & Widget Registration
+        // =========================================================
 
         /// <summary>
         /// Registers a custom app icon on the smartphone home screen.
@@ -96,13 +96,21 @@ namespace SmartphoneAppMessenger
         /// <returns>True if an app was removed; otherwise false.</returns>
         bool UnregisterPhoneApp(string ownerModId, string appId);
 
+        /// <summary>
+        /// Gets the resolved 1x1 icon texture for an app.
+        /// </summary>
+        Texture2D? GetAppIconTexture(string appId);
 
+        /// <summary>
+        /// Gets the texture of a built-in app icon.
+        /// </summary>
+        /// <param name="appIconType">The type of the app icon.</param>
+        /// <returns>The Texture2D of the requested app icon, or null.</returns>
+        Texture2D? GetAppTexture(AppIconType appIconType);
 
-
-
-        /// ======================================
-        /// API to control smartphone screen navigation.
-        /// ======================================
+        // =========================================================
+        // 2. Phone Navigation & Positioning
+        // =========================================================
 
         /// <summary>
         /// Opens the smartphone home (landing) screen for the current player.
@@ -111,94 +119,38 @@ namespace SmartphoneAppMessenger
         /// <returns>True if the home screen was opened; otherwise false.</returns>
         bool OpenPhoneHomeScreen();
 
-
-
-
-        /// ======================================
-        /// API for Contacts
-        /// ======================================
+        /// <summary>
+        /// Gets the current on-screen position (top-left corner) of the phone menu.
+        /// Use this to open a custom app screen at the same position the phone was at,
+        /// so the transition feels seamless.
+        /// </summary>
+        /// <returns>X and Y screen coordinates of the phone frame's top-left corner.</returns>
+        (int x, int y) GetPhonePosition();
 
         /// <summary>
-        /// Event that fires whenever the list of contactable NPCs changes.
-        /// Receives the updated list of NPC internal names.
+        /// Updates the current on-screen position (top-left corner) of the phone menu.
+        /// Call this in your custom app screen's drag/move handling so that the position is preserved
+        /// globally across transitions and when exiting the app.
         /// </summary>
-        event Action<List<string>> ContactableNpcsChanged;
+        /// <param name="x">The new X coordinate of the phone frame.</param>
+        /// <param name="y">The new Y coordinate of the phone frame.</param>
+        void SetPhonePosition(int x, int y);
 
         /// <summary>
-        /// Registers a new custom card under the contact info screen, allowing up to 4 buttons.
+        /// Handles clicks on the phone's built-in bottom navigation buttons.
+        /// Call this in your custom app's receiveLeftClick method.
         /// </summary>
-        /// <param name="modId">The unique ID of the mod registering the card.</param>
-        /// <param name="cardTitle">The title of the card (e.g. "Gift", "Social").</param>
-        /// <param name="buttons">A list of button definitions. Max 4 buttons.</param>
-        /// <param name="npcNames">An optional list of NPC internal names for which this card is available. If null or empty, it is available for all NPCs.</param>
-        /// <returns>True if successfully registered.</returns>
-        bool RegisterContactActionCard(string modId, string cardTitle, IList<IContactActionCardButton> buttons, List<string> npcNames = null);
+        /// <param name="x">The X position of the mouse click.</param>
+        /// <param name="y">The Y position of the mouse click.</param>
+        /// <param name="phoneX">The current X position of the phone frame.</param>
+        /// <param name="phoneY">The current Y position of the phone frame.</param>
+        /// <param name="onBack">Optional action to run when the Back button is clicked.</param>
+        /// <returns>True if a button was clicked and handled, false otherwise.</returns>
+        bool HandlePhoneAppBottomNavClick(int x, int y, int phoneX, int phoneY, Action? onBack = null);
 
-
-
-        /// ======================================
-        /// API for interacting with the smartphone messenger app
-        /// ======================================
-
-        /// <summary>
-        /// Sends a notification to the player's smartphone.
-        /// </summary>
-        /// <param name="message">The content of the notification (shown in the phone notification message).</param>
-        /// <param name="notificationName">(optional) The name of the notification (shown on ingame notification HUD).</param>
-        /// <param name="playerId">(optional) The target player's UniqueMultiplayerID as string. If null/empty/invalid, this is broadcast to all online players.</param>
-        void SendSmartphoneNotification(string message, string notificationName = "", string playerId = "");
-
-
-
-
-
-        /// ======================================
-        /// API for capturing and accessing photos
-        /// ======================================
-
-        /// <summary>
-        /// Captures a photo for StardewSocial programmatically.
-        /// </summary>
-        string CaptureNpcPhoto(GameLocation targetLocation, Vector2 captureCenter, NPC npc = null, bool landscape = false, bool square = false, List<NPC>? visibleNpcAtTarget = null, float zoomLevel = 1f, int? captureTimeOfDay = null, string saveLocation = null);
-
-        /// <summary>
-        /// Gets the list of player photo names.
-        /// </summary>
-        List<string> GetPlayerPhotoNames();
-
-        /// <summary>
-        /// Gets a player photo texture by its name.
-        /// </summary>
-        Texture2D GetPlayerPhotoTexture(string photoName);
-
-        /// <summary>
-        /// Gets the serialized ImageMetadata JSON string for a specific player photo.
-        /// </summary>
-        string GetPlayerPhotoMetadata(string photoName);
-
-        /// <summary>
-        /// Gets all player photos as a dictionary of name and Texture2D.
-        /// </summary>
-        Dictionary<string, Texture2D> GetAllPlayerPhotoTextures();
-
-
-
-
-
-
-
-
-
-        /// ======================================
-        /// API to get phone appearance settings (theme and size).
-        /// ======================================
-
-        /// <summary>
-        /// Gets whether the phone is currently using the small size.
-        /// When true the UI scale is 0.75×; when false it is 1×.
-        /// </summary>
-        /// <returns>True if the user has the small phone size enabled; otherwise false.</returns>
-        bool IsSmallPhoneSize();
+        // =========================================================
+        // 3. Theme & Appearance
+        // =========================================================
 
         /// <summary>
         /// Gets the current phone UI scale factor.
@@ -248,57 +200,18 @@ namespace SmartphoneAppMessenger
         Texture2D? GetCardTexture();
 
         /// <summary>
-        /// Gets the current on-screen position (top-left corner) of the phone menu.
-        /// Use this to open a custom app screen at the same position the phone was at,
-        /// so the transition feels seamless.
+        /// Sets the theme for a component.
         /// </summary>
-        /// <returns>X and Y screen coordinates of the phone frame's top-left corner.</returns>
-        (int x, int y) GetPhonePosition();
+        void SetComponentTheme(string component, string theme);
 
         /// <summary>
-        /// Updates the current on-screen position (top-left corner) of the phone menu.
-        /// Call this in your custom app screen's drag/move handling so that the position is preserved
-        /// globally across transitions and when exiting the app.
+        /// Gets the current theme for a component.
         /// </summary>
-        /// <param name="x">The new X coordinate of the phone frame.</param>
-        /// <param name="y">The new Y coordinate of the phone frame.</param>
-        void SetPhonePosition(int x, int y);
+        string GetComponentTheme(string component);
 
-        /// <summary>
-        /// Handles clicks on the phone's built-in bottom navigation buttons.
-        /// Call this in your custom app's receiveLeftClick method.
-        /// </summary>
-        /// <param name="x">The X position of the mouse click.</param>
-        /// <param name="y">The Y position of the mouse click.</param>
-        /// <param name="phoneX">The current X position of the phone frame.</param>
-        /// <param name="phoneY">The current Y position of the phone frame.</param>
-        /// <param name="onBack">Optional action to run when the Back button is clicked.</param>
-        /// <returns>True if a button was clicked and handled, false otherwise.</returns>
-        bool HandlePhoneAppBottomNavClick(int x, int y, int phoneX, int phoneY, Action? onBack = null);
-
-
-
-
-
-        /// ======================================
-        /// API for texture
-        /// ======================================
-
-        /// <summary>
-        /// Gets the texture of a built-in app icon.
-        /// </summary>
-        /// <param name="appIconType">The type of the app icon.</param>
-        /// <returns>The Texture2D of the requested app icon, or null.</returns>
-        Texture2D? GetAppTexture(AppIconType appIconType);
-
-        /// <summary>
-        /// Opens the photo app in selection/view-only mode to retrieve photo texture and/or metadata.
-        /// </summary>
-        /// <param name="limit">The maximum number of photos that can be selected (must be greater than 0).</param>
-        /// <param name="getTexture">Whether to retrieve the texture data.</param>
-        /// <param name="getMetadata">Whether to retrieve the metadata.</param>
-        /// <param name="onComplete">Callback invoked when user finishes selection or cancels (passes JSON string representing List of SelectedPhotoResult, or empty list).</param>
-        void RetrievePhotos(int limit, bool getTexture, bool getMetadata, Action<string> onComplete, bool squareOnly = false);
+        // =========================================================
+        // 4. Size Control Settings
+        // =========================================================
 
         /// <summary>
         /// Draws the phone scale adjustment buttons (+ and -) if they are enabled in the configuration.
@@ -326,19 +239,64 @@ namespace SmartphoneAppMessenger
         /// </summary>
         void AdjustPhoneSize(float amount);
 
-        /// <summary>
-        /// Sets the theme for a component.
-        /// </summary>
-        void SetComponentTheme(string component, string theme);
+        // =========================================================
+        // 5. Contacts App
+        // =========================================================
 
         /// <summary>
-        /// Gets the current theme for a component.
+        /// Event that fires whenever the list of contactable NPCs changes.
+        /// Receives the updated list of NPC internal names.
         /// </summary>
-        string GetComponentTheme(string component);
+        event Action<List<string>> ContactableNpcsChanged;
 
         /// <summary>
-        /// Gets the resolved 1x1 icon texture for an app.
+        /// Registers a new custom card under the contact info screen, allowing up to 4 buttons.
         /// </summary>
-        Texture2D? GetAppIconTexture(string appId);
+        /// <param name="modId">The unique ID of the mod registering the card.</param>
+        /// <param name="cardTitle">The title of the card (e.g. "Gift", "Social").</param>
+        /// <param name="buttons">A list of button definitions. Max 4 buttons.</param>
+        /// <param name="npcNames">An optional list of NPC internal names for which this card is available. If null or empty, it is available for all NPCs.</param>
+        /// <returns>True if successfully registered.</returns>
+        bool RegisterContactActionCard(string modId, string cardTitle, IList<IContactActionCardButton> buttons, List<string> npcNames = null);
+
+        // =========================================================
+        // 6. Notifications app
+        // =========================================================
+
+        /// <summary>
+        /// Sends a notification to the player's smartphone.
+        /// </summary>
+        /// <param name="message">The content of the notification (shown in the phone notification message).</param>
+        /// <param name="notificationName">(optional) The name of the notification (shown on ingame notification HUD).</param>
+        /// <param name="playerId">(optional) The target player's UniqueMultiplayerID as string. If null/empty/invalid, this is broadcast to all online players.</param>
+        void SendSmartphoneNotification(string message, string notificationName = "", string playerId = "");
+
+        // =========================================================
+        // 7. Photo app
+        // =========================================================
+
+        /// <summary>
+        /// Captures a photo for StardewSocial programmatically.
+        /// </summary>
+        string CaptureNpcPhoto(GameLocation targetLocation, Vector2 captureCenter, NPC npc = null, bool landscape = false, bool square = false, List<NPC>? visibleNpcAtTarget = null, float zoomLevel = 1f, int? captureTimeOfDay = null, string saveLocation = null);
+
+        /// <summary>
+        /// Gets a player photo texture by its name.
+        /// </summary>
+        Texture2D GetPlayerPhotoTexture(string photoName);
+
+        /// <summary>
+        /// Gets the serialized ImageMetadata JSON string for a specific player photo.
+        /// </summary>
+        string GetPlayerPhotoMetadata(string photoName);
+
+        /// <summary>
+        /// Opens the photo app in selection/view-only mode to retrieve photo texture and/or metadata.
+        /// </summary>
+        /// <param name="limit">The maximum number of photos that can be selected (must be greater than 0).</param>
+        /// <param name="getTexture">Whether to retrieve the texture data.</param>
+        /// <param name="getMetadata">Whether to retrieve the metadata.</param>
+        /// <param name="onComplete">Callback invoked when user finishes selection or cancels (passes JSON string representing List of SelectedPhotoResult, or empty list).</param>
+        void RetrievePhotos(int limit, bool getTexture, bool getMetadata, Action<string> onComplete, bool squareOnly = false);
     }
 }

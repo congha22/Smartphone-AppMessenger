@@ -68,37 +68,16 @@ namespace SmartphoneAppMessenger
             configMenu.AddTextOption(
                 mod: ModManifest,
                 name: () => "Language",
-                tooltip: () => "Choose prompt and response language.",
+                tooltip: () => "Enter your prefered language and alphabet. However English is the best supported.",
                 getValue: () => string.IsNullOrWhiteSpace(Config.Language) ? "English" : Config.Language,
                 setValue: value => Config.Language = string.IsNullOrWhiteSpace(value) ? "English" : value.Trim()
             );
 
 
-
-            configMenu.AddTextOption(
-                mod: ModManifest,
-                name: () => "App Icon Style",
-                tooltip: () => "The style of the app icon on the smartphone home screen.",
-                getValue: () => string.IsNullOrWhiteSpace(Config.AppIconStyle) ? "default" : Config.AppIconStyle,
-                setValue: value =>
-                {
-                    Config.AppIconStyle = value == "v2" ? "v2" : "default";
-                    if (iSmartphoneApi != null)
-                    {
-                        try
-                        {
-                            iSmartphoneApi.SetComponentTheme("app_d5a1lamdtd.Smartphone-AppMessenger::messenger", Config.AppIconStyle);
-                        }
-                        catch { }
-                    }
-                },
-                allowedValues: new string[] { "default", "v2" }
-            );
-
             configMenu.AddBoolOption(
                 mod: ModManifest,
                 name: () => "Disable Daily Message",
-                tooltip: () => "If true, the Good Morning button is hidden and the text box is always available.",
+                tooltip: () => "If enabled, the `Good morning...` option will be disabled.\nYou should keep this option False which overtime will help the AI understand what is lore of the character.",
                 getValue: () => Config.DisableDailyMessage,
                 setValue: value => Config.DisableDailyMessage = value
             );
@@ -106,7 +85,7 @@ namespace SmartphoneAppMessenger
             configMenu.AddBoolOption(
                 mod: ModManifest,
                 name: () => "Show Message Image Tags",
-                tooltip: () => "Show tags for attached photos in message tooltips.",
+                tooltip: () => "Shows attached image tags when hovering photo bubbles in the Text app.",
                 getValue: () => Config.ShowMessageImageTags,
                 setValue: value => Config.ShowMessageImageTags = value
             );
@@ -114,26 +93,25 @@ namespace SmartphoneAppMessenger
             configMenu.AddBoolOption(
                 mod: ModManifest,
                 name: () => "Show AI Credit",
-                tooltip: () => "Show an AI credit indicator when receiving an AI message.",
+                tooltip: () => "You have a limited number of usage of the AI features each day when no key is provided.\nThis option shows how many usages you have left. Check it at Messages -> NPC -> AI Credit.",
                 getValue: () => Config.ShowAiCredit,
                 setValue: value => Config.ShowAiCredit = value
             );
 
+            // PAGES
             configMenu.AddPageLink(
                 mod: ModManifest,
                 pageId: "ai-settings",
                 text: () => "AI Settings",
-                tooltip: () => "Configure API keys and models."
+                tooltip: () => "API key, model choice, and limits setting."
             );
 
             configMenu.AddPageLink(
                 mod: ModManifest,
                 pageId: "storage-limits",
-                text: () => "Limits & Storage",
-                tooltip: () => "Configure message retention and photo limits."
+                text: () => "Storage and Limits",
+                tooltip: () => "Storage settings."
             );
-
-
 
             configMenu.AddPageLink(
                 mod: ModManifest,
@@ -142,17 +120,20 @@ namespace SmartphoneAppMessenger
                 tooltip: () => "Call to your own API endpoint. Check out Forum for instruction."
             );
 
+
+
+
             // AI Settings page
             configMenu.AddPage(mod: ModManifest, pageId: "ai-settings", pageTitle: () => "AI Settings");
             configMenu.AddParagraph(
                 mod: ModManifest,
-                text: () => "Setup your AI provider credentials here."
+                text: () => "These settings are only effective when an API key is provided. You can use your own OpenAI or Gemini key. When using custom API, key and model options here have no effect."
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "API Key",
-                tooltip: () => "Your OpenAI or Gemini API Key.",
+                name: () => "Key",
+                tooltip: () => "Use your own OpenAI or Gemini key to remove shared usage limits.\nOpenAI key: https://platform.openai.com/account/api-keys\nGemini key: https://aistudio.google.com/app/apikey\nRestart the game after changing this value.",
                 getValue: () => Config.Key,
                 setValue: value => Config.Key = value
             );
@@ -160,7 +141,7 @@ namespace SmartphoneAppMessenger
             configMenu.AddTextOption(
                 mod: ModManifest,
                 name: () => "Model",
-                tooltip: () => "Select the AI model to use.",
+                tooltip: () => "Chooses the model.\nOf course if you using OpenAI key, you should choose OpenAI model and vice versa for Gemini key.",
                 getValue: () => EnsureAllowedValue(Config.Model, ModConfig.OpenAIModel_54mini, aiModelValues),
                 setValue: value => Config.Model = value,
                 allowedValues: aiModelValues
@@ -168,8 +149,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "NPC Characteristic Detail",
-                tooltip: () => "How much background information to send to the AI.",
+                name: () => "NPC characteristic detail",
+                tooltip: () => "NPC characteristic give the AI a background for each NPC during the chat and the post generation.\nHigher detail improves quality but uses more tokens per NPC.",
                 getValue: () => EnsureAllowedValue(Config.CharacteristicMode, ModConfig.CharacteristicModeShort, characteristicValues),
                 setValue: value => Config.CharacteristicMode = value,
                 allowedValues: characteristicValues
@@ -177,21 +158,21 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Max Summary Word Count",
-                tooltip: () => "Limit on summary length (only used if you use your own API Key).",
+                name: () => "Summary max words",
+                tooltip: () => "Conversation are summarized daily so the AI knows what the previous conversation is about.\nHigher limit means AI will `remember` more details but will use more tokens.\nMemory saved at \"Userdata\\SaveFolder\\summary\".",
                 getValue: () => Config.MaxSummaryWordCount,
                 setValue: value => Config.MaxSummaryWordCount = Math.Clamp(value, 0, 5000),
                 min: 0,
                 max: 5000
             );
 
-            // Limits & Storage page
-            configMenu.AddPage(mod: ModManifest, pageId: "storage-limits", pageTitle: () => "Limits & Storage");
+            // Storage and Limits page
+            configMenu.AddPage(mod: ModManifest, pageId: "storage-limits", pageTitle: () => "Storage and Limits");
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "New Message Chance",
-                tooltip: () => "Adjust chance of getting spontaneous new messages.",
+                name: () => "New message chance",
+                tooltip: () => "Chance to receive a new message from NPCs.",
                 getValue: () => EnsureAllowedValue(Config.NewMessageChance, ModConfig.NewMessageChanceDefault, newMessageChanceValues),
                 setValue: value => Config.NewMessageChance = value,
                 allowedValues: newMessageChanceValues
@@ -199,8 +180,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Messages per NPC/Player",
-                tooltip: () => "Max number of messages to keep per conversation. Old messages are removed when limit is reached.",
+                name: () => "Messages per NPC",
+                tooltip: () => "Older text messages are removed first when this limit is exceeded.",
                 getValue: () => Config.MaxMessage,
                 setValue: value => Config.MaxMessage = Math.Clamp(value, 100, 1000),
                 min: 100,
@@ -209,8 +190,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Shared Photos Limit",
-                tooltip: () => "Max photos to keep in the photo_shared folder.",
+                name: () => "Player photos to keep",
+                tooltip: () => "Older player photos are deleted first.",
                 getValue: () => Config.PhotoShared,
                 setValue: value => Config.PhotoShared = Math.Clamp(value, 10, 500),
                 min: 10,
@@ -223,7 +204,7 @@ namespace SmartphoneAppMessenger
             configMenu.AddPage(mod: ModManifest, pageId: "advance-settings", pageTitle: () => "Advance - Custom API");
             configMenu.AddParagraph(
                 mod: ModManifest,
-                text: () => "When using this advance setting, key and model selection on regular AI setting will be override."
+                text: () => "When using this advance setting, key and model selection on regular AI setting will be override. See mod page for instruction how to use these settings."
             );
 
             configMenu.AddTextOption(
