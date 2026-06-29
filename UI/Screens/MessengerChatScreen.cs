@@ -289,7 +289,8 @@ namespace SmartphoneAppMessenger
             bool chattedToday = isPlayer || MessageManager.NpcMessagesToday.ContainsKey(this.npcName) || (ModEntry.Config?.DisableDailyMessage ?? false);
             if (!chattedToday)
             {
-                string selectedNpcDisplayName = this.npcName;
+                NPC? npc = Game1.getCharacterFromName(this.npcName);
+                string selectedNpcDisplayName = npc?.displayName ?? this.npcName;
                 string firstMessage = Game1.timeOfDay < 1200
                     ? ModEntry.GetTranslation("chat.morning", new { npc = selectedNpcDisplayName })
                     : Game1.timeOfDay < 1800
@@ -923,7 +924,8 @@ namespace SmartphoneAppMessenger
 
             if (this.hiButton != null && this.hiButton.bounds.Contains(x, y))
             {
-                string selectedNpcDisplayName = this.npcName;
+                NPC? npc = Game1.getCharacterFromName(this.npcName);
+                string selectedNpcDisplayName = npc?.displayName ?? this.npcName;
                 string firstMessage = Game1.timeOfDay < 1200
                     ? ModEntry.GetTranslation("chat.morning", new { npc = selectedNpcDisplayName })
                     : Game1.timeOfDay < 1800
