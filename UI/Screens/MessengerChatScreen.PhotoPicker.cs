@@ -438,7 +438,7 @@ namespace SmartphoneAppMessenger
                 1f,
                 false);
 
-            string title = $"Send photos ({this.chatSelectedPhotos.Count}/{ChatPhotoPickerMaxCount})";
+            string title = ModEntry.GetTranslation("photo-picker.send-photos", new { count = this.chatSelectedPhotos.Count, max = ChatPhotoPickerMaxCount });
             DrawPhoneText(
                 b,
                 Game1.dialogueFont,
@@ -480,7 +480,7 @@ namespace SmartphoneAppMessenger
                 DrawPhoneText(
                     b,
                     Game1.smallFont,
-                    "No photos found.",
+                    ModEntry.GetTranslation("photo-picker.no-photos"),
                     new Vector2(previewBounds.X + ScaleValue(20), previewBounds.Y + ScaleValue(20)),
                     Color.Black);
             }
@@ -548,7 +548,7 @@ namespace SmartphoneAppMessenger
                     1f,
                     false);
 
-                string toggleLabel = selected ? "Selected" : "Select";
+                string toggleLabel = selected ? ModEntry.GetTranslation("photo-picker.selected") : ModEntry.GetTranslation("photo-picker.select");
                 Vector2 toggleSize = Game1.smallFont.MeasureString(toggleLabel) * this.phoneUiScale;
                 DrawPhoneText(
                     b,
@@ -570,7 +570,7 @@ namespace SmartphoneAppMessenger
                 1f,
                 false);
 
-            string cancelText = "Cancel";
+            string cancelText = ModEntry.GetTranslation("button.cancel");
             Vector2 cancelSize = Game1.smallFont.MeasureString(cancelText) * this.phoneUiScale;
             DrawPhoneText(
                 b,

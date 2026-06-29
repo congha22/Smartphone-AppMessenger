@@ -63,12 +63,12 @@ namespace SmartphoneAppMessenger
                 ModConfig.NewMessageChanceLow
             };
 
-            configMenu.AddSectionTitle(mod: ModManifest, text: () => "Quick Setup");
+            configMenu.AddSectionTitle(mod: ModManifest, text: () => GetTranslation("config.section.quick-setup"));
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Language",
-                tooltip: () => "Enter your prefered language and alphabet. However English is the best supported.",
+                name: () => GetTranslation("config.language.name"),
+                tooltip: () => GetTranslation("config.language.tooltip"),
                 getValue: () => string.IsNullOrWhiteSpace(Config.Language) ? "English" : Config.Language,
                 setValue: value => Config.Language = string.IsNullOrWhiteSpace(value) ? "English" : value.Trim()
             );
@@ -76,24 +76,24 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddBoolOption(
                 mod: ModManifest,
-                name: () => "Disable Daily Message",
-                tooltip: () => "If enabled, the `Good morning...` option will be disabled.\nYou should keep this option False which overtime will help the AI understand what is lore of the character.",
+                name: () => GetTranslation("config.disable-daily-message.name"),
+                tooltip: () => GetTranslation("config.disable-daily-message.tooltip"),
                 getValue: () => Config.DisableDailyMessage,
                 setValue: value => Config.DisableDailyMessage = value
             );
 
             configMenu.AddBoolOption(
                 mod: ModManifest,
-                name: () => "Show Message Image Tags",
-                tooltip: () => "Shows attached image tags when hovering photo bubbles in the Text app.",
+                name: () => GetTranslation("config.show-image-tags.name"),
+                tooltip: () => GetTranslation("config.show-image-tags.tooltip"),
                 getValue: () => Config.ShowMessageImageTags,
                 setValue: value => Config.ShowMessageImageTags = value
             );
 
             configMenu.AddBoolOption(
                 mod: ModManifest,
-                name: () => "Show AI Credit",
-                tooltip: () => "You have a limited number of usage of the AI features each day when no key is provided.\nThis option shows how many usages you have left. Check it at Messages -> NPC -> AI Credit.",
+                name: () => GetTranslation("config.show-ai-credit.name"),
+                tooltip: () => GetTranslation("config.show-ai-credit.tooltip"),
                 getValue: () => Config.ShowAiCredit,
                 setValue: value => Config.ShowAiCredit = value
             );
@@ -102,46 +102,46 @@ namespace SmartphoneAppMessenger
             configMenu.AddPageLink(
                 mod: ModManifest,
                 pageId: "ai-settings",
-                text: () => "AI Settings",
-                tooltip: () => "API key, model choice, and limits setting."
+                text: () => GetTranslation("config.page.ai-settings.link"),
+                tooltip: () => GetTranslation("config.page.ai-settings.tooltip")
             );
 
             configMenu.AddPageLink(
                 mod: ModManifest,
                 pageId: "storage-limits",
-                text: () => "Storage and Limits",
-                tooltip: () => "Storage settings."
+                text: () => GetTranslation("config.page.storage-limits.link"),
+                tooltip: () => GetTranslation("config.page.storage-limits.tooltip")
             );
 
             configMenu.AddPageLink(
                 mod: ModManifest,
                 pageId: "advance-settings",
-                text: () => "Advance - Custom API",
-                tooltip: () => "Call to your own API endpoint. Check out Forum for instruction."
+                text: () => GetTranslation("config.page.custom-api.link"),
+                tooltip: () => GetTranslation("config.page.custom-api.tooltip")
             );
 
 
 
 
             // AI Settings page
-            configMenu.AddPage(mod: ModManifest, pageId: "ai-settings", pageTitle: () => "AI Settings");
+            configMenu.AddPage(mod: ModManifest, pageId: "ai-settings", pageTitle: () => GetTranslation("config.page.ai-settings.title"));
             configMenu.AddParagraph(
                 mod: ModManifest,
-                text: () => "These settings are only effective when an API key is provided. You can use your own OpenAI or Gemini key. When using custom API, key and model options here have no effect."
+                text: () => GetTranslation("config.page.ai-settings.desc")
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Key",
-                tooltip: () => "Use your own OpenAI or Gemini key to remove shared usage limits.\nOpenAI key: https://platform.openai.com/account/api-keys\nGemini key: https://aistudio.google.com/app/apikey\nRestart the game after changing this value.",
+                name: () => GetTranslation("config.key.name"),
+                tooltip: () => GetTranslation("config.key.tooltip"),
                 getValue: () => Config.Key,
                 setValue: value => Config.Key = value
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Model",
-                tooltip: () => "Chooses the model.\nOf course if you using OpenAI key, you should choose OpenAI model and vice versa for Gemini key.",
+                name: () => GetTranslation("config.model.name"),
+                tooltip: () => GetTranslation("config.model.tooltip"),
                 getValue: () => EnsureAllowedValue(Config.Model, ModConfig.OpenAIModel_54mini, aiModelValues),
                 setValue: value => Config.Model = value,
                 allowedValues: aiModelValues
@@ -149,8 +149,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "NPC characteristic detail",
-                tooltip: () => "NPC characteristic give the AI a background for each NPC during the chat and the post generation.\nHigher detail improves quality but uses more tokens per NPC.",
+                name: () => GetTranslation("config.characteristic.name"),
+                tooltip: () => GetTranslation("config.characteristic.tooltip"),
                 getValue: () => EnsureAllowedValue(Config.CharacteristicMode, ModConfig.CharacteristicModeShort, characteristicValues),
                 setValue: value => Config.CharacteristicMode = value,
                 allowedValues: characteristicValues
@@ -158,8 +158,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Summary max words",
-                tooltip: () => "Conversation are summarized daily so the AI knows what the previous conversation is about.\nHigher limit means AI will `remember` more details but will use more tokens.\nMemory saved at \"Userdata\\SaveFolder\\summary\".",
+                name: () => GetTranslation("config.max-summary.name"),
+                tooltip: () => GetTranslation("config.max-summary.tooltip"),
                 getValue: () => Config.MaxSummaryWordCount,
                 setValue: value => Config.MaxSummaryWordCount = Math.Clamp(value, 0, 5000),
                 min: 0,
@@ -167,12 +167,12 @@ namespace SmartphoneAppMessenger
             );
 
             // Storage and Limits page
-            configMenu.AddPage(mod: ModManifest, pageId: "storage-limits", pageTitle: () => "Storage and Limits");
+            configMenu.AddPage(mod: ModManifest, pageId: "storage-limits", pageTitle: () => GetTranslation("config.page.storage-limits.title"));
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "New message chance",
-                tooltip: () => "Chance to receive a new message from NPCs.",
+                name: () => GetTranslation("config.new-message-chance.name"),
+                tooltip: () => GetTranslation("config.new-message-chance.tooltip"),
                 getValue: () => EnsureAllowedValue(Config.NewMessageChance, ModConfig.NewMessageChanceDefault, newMessageChanceValues),
                 setValue: value => Config.NewMessageChance = value,
                 allowedValues: newMessageChanceValues
@@ -180,8 +180,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Messages per NPC",
-                tooltip: () => "Older text messages are removed first when this limit is exceeded.",
+                name: () => GetTranslation("config.max-message.name"),
+                tooltip: () => GetTranslation("config.max-message.tooltip"),
                 getValue: () => Config.MaxMessage,
                 setValue: value => Config.MaxMessage = Math.Clamp(value, 100, 1000),
                 min: 100,
@@ -190,8 +190,8 @@ namespace SmartphoneAppMessenger
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Player photos to keep",
-                tooltip: () => "Older player photos are deleted first.",
+                name: () => GetTranslation("config.photos-to-keep.name"),
+                tooltip: () => GetTranslation("config.photos-to-keep.tooltip"),
                 getValue: () => Config.PhotoShared,
                 setValue: value => Config.PhotoShared = Math.Clamp(value, 10, 500),
                 min: 10,
@@ -201,64 +201,64 @@ namespace SmartphoneAppMessenger
 
 
 
-            configMenu.AddPage(mod: ModManifest, pageId: "advance-settings", pageTitle: () => "Advance - Custom API");
+            configMenu.AddPage(mod: ModManifest, pageId: "advance-settings", pageTitle: () => GetTranslation("config.page.custom-api.title"));
             configMenu.AddParagraph(
                 mod: ModManifest,
-                text: () => "When using this advance setting, key and model selection on regular AI setting will be override. See mod page for instruction how to use these settings."
+                text: () => GetTranslation("config.page.custom-api.desc")
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Custom API Endpoint",
-                tooltip: () => "URL endpoint for a custom API (leave empty to use default providers).",
+                name: () => GetTranslation("config.custom-endpoint.name"),
+                tooltip: () => GetTranslation("config.custom-endpoint.tooltip"),
                 getValue: () => Config.CustomApiEndpoint,
                 setValue: value => Config.CustomApiEndpoint = (value ?? string.Empty).Trim()
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Custom API Key",
-                tooltip: () => "Key for your custom API endpoint.",
+                name: () => GetTranslation("config.custom-key.name"),
+                tooltip: () => GetTranslation("config.custom-key.tooltip"),
                 getValue: () => Config.CustomApiKey,
                 setValue: value => Config.CustomApiKey = value
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Custom API Key Header",
-                tooltip: () => "HTTP Header name for the API Key.",
+                name: () => GetTranslation("config.custom-header.name"),
+                tooltip: () => GetTranslation("config.custom-header.tooltip"),
                 getValue: () => Config.CustomApiKeyHeader,
                 setValue: value => Config.CustomApiKeyHeader = (value ?? "Authorization").Trim()
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Custom API Key Prefix",
-                tooltip: () => "Prefix for the key (e.g. Bearer).",
+                name: () => GetTranslation("config.custom-prefix.name"),
+                tooltip: () => GetTranslation("config.custom-prefix.tooltip"),
                 getValue: () => Config.CustomApiKeyPrefix,
                 setValue: value => Config.CustomApiKeyPrefix = (value ?? "Bearer").Trim()
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Custom API Payload Template",
-                tooltip: () => "JSON payload template.",
+                name: () => GetTranslation("config.custom-payload.name"),
+                tooltip: () => GetTranslation("config.custom-payload.tooltip"),
                 getValue: () => Config.CustomApiPayloadTemplate,
                 setValue: value => Config.CustomApiPayloadTemplate = value ?? string.Empty
             );
 
             configMenu.AddTextOption(
                 mod: ModManifest,
-                name: () => "Custom API Response JSON Path",
-                tooltip: () => "JSON path to extract response text.",
+                name: () => GetTranslation("config.custom-path.name"),
+                tooltip: () => GetTranslation("config.custom-path.tooltip"),
                 getValue: () => Config.CustomApiResponseTextPath,
                 setValue: value => Config.CustomApiResponseTextPath = value ?? string.Empty
             );
 
             configMenu.AddNumberOption(
                 mod: ModManifest,
-                name: () => "Custom API Timeout Seconds",
-                tooltip: () => "Request timeout in seconds.",
+                name: () => GetTranslation("config.custom-timeout.name"),
+                tooltip: () => GetTranslation("config.custom-timeout.tooltip"),
                 getValue: () => Config.CustomApiTimeoutSeconds,
                 setValue: value => Config.CustomApiTimeoutSeconds = Math.Clamp(value, 5, 300),
                 min: 5,

@@ -189,7 +189,7 @@ namespace SmartphoneAppMessenger
         {
             int titleX = PhoneX(105);
             int titleY = PhoneY(65);
-            b.DrawString(Game1.dialogueFont, "Profile", new Vector2(titleX, titleY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
+            b.DrawString(Game1.dialogueFont, ModEntry.GetTranslation("profile.title"), new Vector2(titleX, titleY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
 
             Rectangle headerBounds = PhoneRect(50, 120, 500, 190);
             UI.CardDrawing.DrawCard(
@@ -248,7 +248,7 @@ namespace SmartphoneAppMessenger
 
             b.DrawString(
                 Game1.dialogueFont,
-                "Profile Settings",
+                ModEntry.GetTranslation("profile.settings"),
                 new Vector2(this.profileAvatarBounds.Right + ScaleValue(18), headerBounds.Y + ScaleValue(22)),
                 Color.Black,
                 0f,
@@ -263,7 +263,7 @@ namespace SmartphoneAppMessenger
 
             // Age Field
             int ageLabelY = PhoneY(315);
-            b.DrawString(Game1.smallFont, "Age", new Vector2(fieldX, ageLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
+            b.DrawString(Game1.smallFont, ModEntry.GetTranslation("profile.age"), new Vector2(fieldX, ageLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
             this.profileAgeFieldBounds = new Rectangle(fieldX, PhoneY(350), fieldWidth, fieldHeight);
             UI.CardDrawing.DrawCard(
                 b,
@@ -282,7 +282,7 @@ namespace SmartphoneAppMessenger
 
             // Birthday Field
             int birthdayLabelY = PhoneY(420);
-            b.DrawString(Game1.smallFont, "Birthday", new Vector2(fieldX, birthdayLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
+            b.DrawString(Game1.smallFont, ModEntry.GetTranslation("profile.birthday"), new Vector2(fieldX, birthdayLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
             int birthdayInputWidth = ScaleValue(115);
             int seasonButtonWidth = ScaleValue(150);
             this.profileBirthdayFieldBounds = new Rectangle(fieldX, PhoneY(450), birthdayInputWidth, fieldHeight);
@@ -317,7 +317,7 @@ namespace SmartphoneAppMessenger
 
             b.DrawString(
                 Game1.smallFont,
-                this.birthdaySeason,
+                ModEntry.GetTranslation($"season.{this.birthdaySeason.ToLowerInvariant()}"),
                 new Vector2(this.profileSeasonButtonBounds.X + ScaleValue(16), this.profileSeasonButtonBounds.Y + ScaleValue(16)),
                 Color.Black,
                 0f,
@@ -339,7 +339,7 @@ namespace SmartphoneAppMessenger
 
             // About Me Field
             int descriptionLabelY = PhoneY(520);
-            b.DrawString(Game1.smallFont, "About me", new Vector2(fieldX, descriptionLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
+            b.DrawString(Game1.smallFont, ModEntry.GetTranslation("profile.about-me"), new Vector2(fieldX, descriptionLabelY), Color.Black, 0f, Vector2.Zero, this.phoneUiScale, SpriteEffects.None, 1f);
             this.profileDescriptionFieldBounds = new Rectangle(fieldX, PhoneY(555), fieldWidth, ScaleValue(285));
             UI.CardDrawing.DrawCard(
                 b,
@@ -353,7 +353,7 @@ namespace SmartphoneAppMessenger
 
             if (string.IsNullOrEmpty(this.aboutMeTextBox.Text))
             {
-                string placeholder = "Something about you.";
+                string placeholder = ModEntry.GetTranslation("profile.placeholder");
                 int placeholderX = this.profileDescriptionFieldBounds.X + ScaleValue(15);
                 int placeholderY = this.profileDescriptionFieldBounds.Y + ScaleValue(15);
                 b.DrawString(
@@ -400,7 +400,7 @@ namespace SmartphoneAppMessenger
                 1f,
                 false);
 
-            string title = "Select Avatar";
+            string title = ModEntry.GetTranslation("profile.select-avatar");
             b.DrawString(
                 Game1.dialogueFont,
                 title,
@@ -446,8 +446,8 @@ namespace SmartphoneAppMessenger
 
             if (this.avatarPhotoCandidates.Count == 0)
             {
-                string noPhotosMsg = "Only square photo\ncan be used\nas avatar.";
-                Vector2 msgSize = Game1.smallFont.MeasureString("Only square photo") * this.phoneUiScale;
+                string noPhotosMsg = ModEntry.GetTranslation("profile.avatar-warning");
+                Vector2 msgSize = Game1.smallFont.MeasureString(ModEntry.GetTranslation("profile.avatar-warning-line1")) * this.phoneUiScale;
                 int startY = previewBounds.Y + (previewBounds.Height - (int)msgSize.Y * 3) / 2;
 
                 string[] msgLines = noPhotosMsg.Split('\n');
@@ -536,7 +536,7 @@ namespace SmartphoneAppMessenger
                     1f,
                     false);
 
-                string toggleLabel = selected ? "Selected" : "Select";
+                string toggleLabel = selected ? ModEntry.GetTranslation("photo-picker.selected") : ModEntry.GetTranslation("photo-picker.select");
                 Vector2 toggleSize = Game1.smallFont.MeasureString(toggleLabel) * this.phoneUiScale;
                 b.DrawString(
                     Game1.smallFont,
@@ -562,7 +562,7 @@ namespace SmartphoneAppMessenger
                 1f,
                 false);
 
-            string cancelText = "Cancel";
+            string cancelText = ModEntry.GetTranslation("button.cancel");
             Vector2 cancelSize = Game1.smallFont.MeasureString(cancelText) * this.phoneUiScale;
             b.DrawString(
                 Game1.smallFont,

@@ -356,7 +356,7 @@ namespace SmartphoneAppMessenger
             // Draw placeholder or typed text
             if (string.IsNullOrEmpty(this.filterTextBox.Text))
             {
-                string textToDraw = "Search...";
+                string textToDraw = ModEntry.GetTranslation("screen.search-placeholder");
                 Color textColor = Color.Gray;
                 SpriteFont font = Game1.smallFont;
                 float textScale = 0.8f * this.phoneUiScale;
@@ -1181,7 +1181,7 @@ namespace SmartphoneAppMessenger
                     var showMethod = keyboardInputType.GetMethod("Show", new[] { typeof(string), typeof(string), typeof(string), typeof(bool) });
                     if (showMethod != null)
                     {
-                        this.pendingKeyboardTask = (Task<string>)showMethod.Invoke(null, new object[] { "Filter", "Filter NPC list", currentText, false })!;
+                        this.pendingKeyboardTask = (Task<string>)showMethod.Invoke(null, new object[] { ModEntry.GetTranslation("keyboard.filter.title"), ModEntry.GetTranslation("keyboard.filter.description"), currentText, false })!;
                     }
                 }
             }

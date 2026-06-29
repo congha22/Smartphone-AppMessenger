@@ -61,7 +61,7 @@ namespace SmartphoneAppMessenger
                     var showMethod = keyboardInputType.GetMethod("Show", new[] { typeof(string), typeof(string), typeof(string), typeof(bool) });
                     if (showMethod != null)
                     {
-                        this.pendingKeyboardTask = (Task<string>)showMethod.Invoke(null, new object[] { "Input", "Enter text", currentText, false })!;
+                        this.pendingKeyboardTask = (Task<string>)showMethod.Invoke(null, new object[] { ModEntry.GetTranslation("keyboard.text.title"), ModEntry.GetTranslation("keyboard.text.description"), currentText, false })!;
                     }
                 }
             }

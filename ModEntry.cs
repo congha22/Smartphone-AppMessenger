@@ -467,7 +467,7 @@ namespace SmartphoneAppMessenger
             bool appRegistered = iSmartphoneApi.RegisterPhoneApp(
                 ownerModId: this.ModManifest.UniqueID,
                 appId: AppId,
-                displayName: "Messenger",
+                displayName: GetTranslation("app.name"),
                 onClick: this.OpenMessengerApp,
                 closePhoneOnLaunch: true,
                 sourceRect: null,
@@ -497,7 +497,7 @@ namespace SmartphoneAppMessenger
             {
                 new ContactActionCardButton
                 {
-                    Text = "Chat",
+                    Text = GetTranslation("button.chat"),
                     BackgroundColor = Color.SeaGreen,
                     TextColor = Color.White,
                     OnClick = (npcName) =>
@@ -516,7 +516,7 @@ namespace SmartphoneAppMessenger
                     }
                 }
             };
-            iSmartphoneApi.RegisterContactActionCard(this.ModManifest.UniqueID, "Messenger", buttons);
+            iSmartphoneApi.RegisterContactActionCard(this.ModManifest.UniqueID, GetTranslation("app.name"), buttons);
         }
 
         private void OpenMessengerApp()
@@ -730,6 +730,11 @@ namespace SmartphoneAppMessenger
                     };
                 }
             }
+        }
+
+        public static string GetTranslation(string key, object? tokens = null)
+        {
+            return Instance.Helper.Translation.Get(key, tokens).ToString();
         }
     }
 

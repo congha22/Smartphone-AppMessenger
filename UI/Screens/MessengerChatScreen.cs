@@ -291,10 +291,10 @@ namespace SmartphoneAppMessenger
             {
                 string selectedNpcDisplayName = this.npcName;
                 string firstMessage = Game1.timeOfDay < 1200
-                    ? $"Good morning {selectedNpcDisplayName}"
+                    ? ModEntry.GetTranslation("chat.morning", new { npc = selectedNpcDisplayName })
                     : Game1.timeOfDay < 1800
-                        ? $"Good afternoon {selectedNpcDisplayName}"
-                        : $"Good evening {selectedNpcDisplayName}";
+                        ? ModEntry.GetTranslation("chat.afternoon", new { npc = selectedNpcDisplayName })
+                        : ModEntry.GetTranslation("chat.evening", new { npc = selectedNpcDisplayName });
 
 
                 this.sendButton = null;
@@ -365,7 +365,7 @@ namespace SmartphoneAppMessenger
                 var onlineTarget = Game1.getOnlineFarmers().FirstOrDefault(f => string.Equals(f.Name, this.npcName, StringComparison.OrdinalIgnoreCase));
                 if (onlineTarget == null)
                 {
-                    MessageManager.AddPlayerMessage(this.npcName, $"SYSTEM: {this.npcName} is offline. Message could not be sent.", isFromPlayer: false);
+                    MessageManager.AddPlayerMessage(this.npcName, ModEntry.GetTranslation("chat.offline", new { npc = this.npcName }), isFromPlayer: false);
                     RebuildChatBubbles();
                     this.lastMessageCount = MessageManager.GetMessagesForNpc(this.npcName).Count;
                     return;
@@ -843,13 +843,13 @@ namespace SmartphoneAppMessenger
 
                     if (ModEntry.iUnlimitedEventExpansionApi == null)
                     {
-                        DrawPhoneText(b, Game1.smallFont, "Get UnlimitedEventExpansion", new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(3)), Color.Black);
-                        DrawPhoneText(b, Game1.smallFont, "to schedule events!!!", new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(30)), Color.Black);
+                        DrawPhoneText(b, Game1.smallFont, ModEntry.GetTranslation("chat.event.get-expansion"), new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(3)), Color.Black);
+                        DrawPhoneText(b, Game1.smallFont, ModEntry.GetTranslation("chat.event.to-schedule"), new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(30)), Color.Black);
                     }
                     else if (this.currentEvents.Count == 0)
                     {
-                        DrawPhoneText(b, Game1.smallFont, "No event available", new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(3)), Color.Black);
-                        DrawPhoneText(b, Game1.smallFont, "at current friendship!!!", new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(30)), Color.Black);
+                        DrawPhoneText(b, Game1.smallFont, ModEntry.GetTranslation("chat.event.no-event"), new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(3)), Color.Black);
+                        DrawPhoneText(b, Game1.smallFont, ModEntry.GetTranslation("chat.event.at-friendship"), new Vector2(panelX + panelPadding, panelY + panelPadding + ScaleValue(30)), Color.Black);
                     }
                     else
                     {
@@ -863,7 +863,7 @@ namespace SmartphoneAppMessenger
                             this.eventButtonBounds.Add(buttonBounds);
 
 
-                            string label = GetTailTextToFit($"Schedule {evt.EventType}", Game1.smallFont, buttonBounds.Width - ScaleValue(16));
+                            string label = GetTailTextToFit(ModEntry.GetTranslation("chat.event.schedule", new { eventType = evt.EventType }), Game1.smallFont, buttonBounds.Width - ScaleValue(16));
                             DrawChatQuickActionButton(b, buttonBounds, label, false);
 
 
@@ -925,10 +925,10 @@ namespace SmartphoneAppMessenger
             {
                 string selectedNpcDisplayName = this.npcName;
                 string firstMessage = Game1.timeOfDay < 1200
-                    ? $"Good morning {selectedNpcDisplayName}"
+                    ? ModEntry.GetTranslation("chat.morning", new { npc = selectedNpcDisplayName })
                     : Game1.timeOfDay < 1800
-                        ? $"Good afternoon {selectedNpcDisplayName}"
-                        : $"Good evening {selectedNpcDisplayName}";
+                        ? ModEntry.GetTranslation("chat.afternoon", new { npc = selectedNpcDisplayName })
+                        : ModEntry.GetTranslation("chat.evening", new { npc = selectedNpcDisplayName });
 
                 MessageManager.AddMessage(this.npcName, firstMessage, type: "sent");
                 PhoneDialogueRuntime.FirstDailyText(this.npcName, firstMessage);
@@ -1476,8 +1476,8 @@ namespace SmartphoneAppMessenger
             var usage = ModEntry.GetAiUsageSnapshot();
             var lines = new List<string>
             {
-                $"Daily usage left: {Math.Max(0, usage.DailyUsageLeft)}/{usage.DailyUsageMax}",
-                $"Current credit left: {Math.Max(0, usage.CreditsLeft)}/{usage.CreditsMax}"
+                ModEntry.GetTranslation("chat.usage.daily-left", new { current = Math.Max(0, usage.DailyUsageLeft), max = usage.DailyUsageMax }),
+                ModEntry.GetTranslation("chat.usage.credits-left", new { current = Math.Max(0, usage.CreditsLeft), max = usage.CreditsMax })
             };
 
             if (usage.CreditsLeft < usage.CreditsMax)
@@ -1486,10 +1486,10 @@ namespace SmartphoneAppMessenger
                 if (ModEntry.TryGetNextAiCreditRefillTime(Game1.timeOfDay, out int nextRefillTime))
                     nextRefillText = FormatAiRefillTime(nextRefillTime);
 
-                lines.Add($"Next credit refill at {nextRefillText}");
+                lines.Add(ModEntry.GetTranslation("chat.usage.next-refill", new { time = nextRefillText }));
             }
 
-            lines.Add("When daily usage left is 0, credit wont be refill");
+            lines.Add(ModEntry.GetTranslation("chat.usage.no-refill-note"));
             return string.Join("\n", lines);
         }
 

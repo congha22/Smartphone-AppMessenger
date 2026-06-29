@@ -122,7 +122,7 @@ namespace SmartphoneAppMessenger
 
             if (newMcs.Count == 0)
             {
-                string noMsgText = "No new messages.";
+                string noMsgText = ModEntry.GetTranslation("widget.no-new-messages");
                 float noMsgScale = 0.85f * uiScale;
                 Vector2 textSize = Game1.smallFont.MeasureString(noMsgText) * noMsgScale;
                 b.DrawString(

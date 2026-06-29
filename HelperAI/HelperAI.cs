@@ -431,7 +431,7 @@ namespace SmartphoneAppMessenger
                         if (totalFailedCheck >= 3)
                         {
                             IsMaxedLimit = true;
-                            iSmartphoneApi?.SendSmartphoneNotification("=== Smartphone ===^^Failed to check AI usage for 3 times in a row, AI usage is temporarily disabled.^^Try restart your game and check mod page for support. HaPyke!");
+                            iSmartphoneApi?.SendSmartphoneNotification(ModEntry.GetTranslation("notification.usage-check-failed"));
                             return;
                         }
                     }
@@ -440,7 +440,7 @@ namespace SmartphoneAppMessenger
                     if (regular > 25000000)
                     {
                         IsMaxedLimit = true;
-                        iSmartphoneApi?.SendSmartphoneNotification("=== Smartphone ===^^AI usage reached its limit. Chat and StardewSocial are temporarily disabled.^^This will be reset the next day in timezone UTC+0. HaPyke!");
+                        iSmartphoneApi?.SendSmartphoneNotification(ModEntry.GetTranslation("notification.usage-limit-reached"));
                         return;
                     }
 
@@ -456,7 +456,7 @@ namespace SmartphoneAppMessenger
 
                         IsReducedQuality = true;
 
-                        iSmartphoneApi?.SendSmartphoneNotification("=== Smartphone ===^^Usage is very high today, AI quality is temporarily downgraded so I won't go bankrupt lol.^^This will be reset the next day in timezone UTC+0. HaPyke!");
+                        iSmartphoneApi?.SendSmartphoneNotification(ModEntry.GetTranslation("notification.usage-high-downgrade"));
                     }
                     else if (regular > 10000000)
                     {
@@ -791,7 +791,7 @@ namespace SmartphoneAppMessenger
                                     : npc.displayName;
 
                                 Game1.activeClickableMenu = new ConfirmationDialog(
-                                    $"Schedule {registeredEvent.EventType} event with {npcDisplayName}?",
+                                    ModEntry.GetTranslation("chat.event.schedule-confirm", new { eventType = registeredEvent.EventType, npc = npcDisplayName }),
                                     onConfirm: (Farmer who) =>
                                     {
                                         Game1.activeClickableMenu = null;
