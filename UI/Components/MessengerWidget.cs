@@ -263,42 +263,136 @@ namespace SmartphoneAppMessenger
             b.DrawString(Game1.smallFont, fallbackLetter, letterPos, Color.White, 0f, Vector2.Zero, 0.75f * uiScale, SpriteEffects.None, 1f);
         }
 
+        private static bool IsCjk(char c)
+        {
+            return (c >= 0x4e00 && c <= 0x9fff) || // CJK Unified Ideographs
+                   (c >= 0x3040 && c <= 0x309f) || // Hiragana
+                   (c >= 0x30a0 && c <= 0x30ff) || // Katakana
+                   (c >= 0xac00 && c <= 0xd7af) || // Hangul Syllables
+                   (c >= 0xff00 && c <= 0xffef) || // Halfwidth and Fullwidth Forms
+                   (c >= 0x3000 && c <= 0x303f);   // CJK Symbols and Punctuation
+        }
+
         private static List<string> SplitTextIntoLines(string text, SpriteFont font, int maxWidth)
         {
-            List<string> lines = new List<string>();
+            List<string> allLines = new List<string>();
             if (string.IsNullOrEmpty(text))
             {
-                return lines;
+                return allLines;
             }
 
-            string[] paragraphs = text.Split('\n');
+            string[] paragraphs = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             foreach (var paragraph in paragraphs)
             {
-                string[] words = paragraph.Split(' ');
+                List<string> tokens = new List<string>();
+                string currentWord = "";
+
+                for (int i = 0; i < paragraph.Length; i++)
+                {
+                    char c = paragraph[i];
+                    if (c == ' ')
+                    {
+                        if (currentWord != "")
+                        {
+                            tokens.Add(currentWord);
+                            currentWord = "";
+                        }
+                        tokens.Add(" ");
+                    }
+                    else if (IsCjk(c))
+                    {
+                        if (currentWord != "")
+                        {
+                            tokens.Add(currentWord);
+                            currentWord = "";
+                        }
+                        tokens.Add(c.ToString());
+                    }
+                    else
+                    {
+                        currentWord += c;
+                    }
+                }
+                if (currentWord != "")
+                {
+                    tokens.Add(currentWord);
+                }
+
+                List<string> lines = new List<string>();
                 string currentLine = "";
 
-                foreach (var word in words)
+                foreach (var token in tokens)
                 {
-                    string testLine = string.IsNullOrEmpty(currentLine) ? word : currentLine + " " + word;
-                    float testWidth = font.MeasureString(testLine).X;
+                    if (token == " ")
+                    {
+                        if (currentLine != "" && !currentLine.EndsWith(" "))
+                        {
+                            if (font.MeasureString(currentLine + " ").X <= maxWidth)
+                            {
+                                currentLine += " ";
+                            }
+                        }
+                        continue;
+                    }
 
-                    if (testWidth <= maxWidth)
+                    string testLine = currentLine;
+                    testLine += token;
+
+                    if (font.MeasureString(testLine).X <= maxWidth)
                     {
                         currentLine = testLine;
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(currentLine))
-                            lines.Add(currentLine);
-                        currentLine = word;
+                        if (currentLine != "")
+                        {
+                            lines.Add(currentLine.TrimEnd());
+                            currentLine = "";
+                        }
+
+                        if (font.MeasureString(token).X <= maxWidth)
+                        {
+                            currentLine = token;
+                        }
+                        else
+                        {
+                            for (int j = 0; j < token.Length; j++)
+                            {
+                                char tc = token[j];
+                                string nextTest = currentLine + tc;
+                                if (font.MeasureString(nextTest).X <= maxWidth)
+                                {
+                                    currentLine = nextTest;
+                                }
+                                else
+                                {
+                                    if (currentLine != "")
+                                    {
+                                        lines.Add(currentLine.TrimEnd());
+                                    }
+                                    currentLine = tc.ToString();
+                                }
+                            }
+                        }
                     }
                 }
 
-                if (!string.IsNullOrEmpty(currentLine) || words.Length == 0)
-                    lines.Add(currentLine);
+                if (currentLine != "")
+                {
+                    lines.Add(currentLine.TrimEnd());
+                }
+
+                if (lines.Count == 0)
+                {
+                    allLines.Add("");
+                }
+                else
+                {
+                    allLines.AddRange(lines);
+                }
             }
 
-            return lines;
+            return allLines;
         }
     }
 }

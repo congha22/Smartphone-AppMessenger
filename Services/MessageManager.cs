@@ -73,7 +73,7 @@ namespace SmartphoneAppMessenger
                 // Only add the date header if this is the first message today and they haven't chatted before?
                 // The requirements say when they first chat, maybe just add the date.
 
-                NpcMessagesToday[npcName].Add($"SYSTEM: ---{SDate.Now().DayOfWeek}, {SDate.Now().Season} {SDate.Now().Day:00}-Y{SDate.Now().Year}---");
+                NpcMessagesToday[npcName].Add($"SYSTEM: ---{Utility.getDateStringFor(SDate.Now().Day, SDate.Now().SeasonIndex, SDate.Now().Year)}---");
             }
 
             string formattedMessage;
@@ -194,6 +194,8 @@ namespace SmartphoneAppMessenger
             currentPlayerAge = "Adult";
             currentPlayerBirthDate = "1";
             currentPlayerBirthSeason = "Spring";
+            currentPlayerProfile = string.Empty;
+            currentPlayerAvatar = string.Empty;
 
             if (!Context.IsWorldReady || Game1.player == null)
                 return;
@@ -207,6 +209,8 @@ namespace SmartphoneAppMessenger
                     currentPlayerAge = string.IsNullOrWhiteSpace(loaded.Age) ? "Adult" : loaded.Age;
                     currentPlayerBirthDate = string.IsNullOrWhiteSpace(loaded.BirthDate) ? "1" : loaded.BirthDate;
                     currentPlayerBirthSeason = string.IsNullOrWhiteSpace(loaded.BirthSeason) ? "Spring" : loaded.BirthSeason;
+                    currentPlayerProfile = loaded.Profile ?? string.Empty;
+                    currentPlayerAvatar = loaded.AvatarPath ?? string.Empty;
                 }
             }
             catch (Exception ex)
@@ -218,6 +222,8 @@ namespace SmartphoneAppMessenger
             Game1.player.modData[$"{modId}/Age"] = currentPlayerAge;
             Game1.player.modData[$"{modId}/BirthDate"] = currentPlayerBirthDate;
             Game1.player.modData[$"{modId}/BirthSeason"] = currentPlayerBirthSeason;
+            Game1.player.modData[$"{modId}/Profile"] = currentPlayerProfile;
+            Game1.player.modData[$"{modId}/AvatarPath"] = currentPlayerAvatar;
         }
 
         public static void SavePlayerProfile(IModHelper helper)
@@ -230,6 +236,8 @@ namespace SmartphoneAppMessenger
             Game1.player.modData[$"{modId}/Age"] = currentPlayerAge;
             Game1.player.modData[$"{modId}/BirthDate"] = currentPlayerBirthDate;
             Game1.player.modData[$"{modId}/BirthSeason"] = currentPlayerBirthSeason;
+            Game1.player.modData[$"{modId}/Profile"] = currentPlayerProfile;
+            Game1.player.modData[$"{modId}/AvatarPath"] = currentPlayerAvatar;
 
             try
             {
