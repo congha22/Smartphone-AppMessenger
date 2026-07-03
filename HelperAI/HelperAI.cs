@@ -532,8 +532,6 @@ namespace SmartphoneAppMessenger
         /// <summary>Call AI provider to generate a response</summary>
         public static async Task<string> SendMessageToAssistant(string npcName, string text = "", string type = "response")
         {
-
-            SMonitor.Log(text, LogLevel.Error);
             NPC npc = Game1.getCharacterFromName(npcName);
             if (npc is null || IsMaxedLimit || IsAiTemporarilyDisabledForPhoneInactivity())
             {
@@ -554,7 +552,7 @@ namespace SmartphoneAppMessenger
                 : text;
             string system = GetSystemMessage(npc, type, allowToolCalling: !string.Equals(provider, AiProviderCustom, StringComparison.OrdinalIgnoreCase));
 
-            SMonitor.Log(system, LogLevel.Error);
+            // SMonitor.Log(system, LogLevel.Error);
 
             string responseMessage = "";
             using (var httpClient = new HttpClient())
@@ -741,14 +739,14 @@ namespace SmartphoneAppMessenger
                     }
 
 
-                    SMonitor.Log(jsonResponse.ToString(), LogLevel.Error);
-                    SMonitor.Log("system-----", LogLevel.Error);
-                    SMonitor.Log(system, LogLevel.Error);
-                    SMonitor.Log("user-----", LogLevel.Error);
-                    SMonitor.Log(user, LogLevel.Error);
-                    SMonitor.Log("response-----", LogLevel.Error);
-                    SMonitor.Log(responseMessage, LogLevel.Error);
-                    SMonitor.Log("\n\n", LogLevel.Error);
+                    // SMonitor.Log(jsonResponse.ToString(), LogLevel.Error);
+                    // SMonitor.Log("system-----", LogLevel.Error);
+                    // SMonitor.Log(system, LogLevel.Error);
+                    // SMonitor.Log("user-----", LogLevel.Error);
+                    // SMonitor.Log(user, LogLevel.Error);
+                    // SMonitor.Log("response-----", LogLevel.Error);
+                    // SMonitor.Log(responseMessage, LogLevel.Error);
+                    // SMonitor.Log("\n\n", LogLevel.Error);
 
                     if (toolCalls.Count > 0)
                     {

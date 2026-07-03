@@ -6,6 +6,9 @@
   "UniqueID": "d5a1lamdtd.Smartphone-AppMessenger",
   "EntryDll": "Smartphone-AppMessenger.dll",
   "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": [
+    "Nexus:48347"
+  ],
   "Dependencies": [
     {
       "UniqueID": "d5a1lamdtd.Smartphone",

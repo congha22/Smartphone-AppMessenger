@@ -783,6 +783,11 @@ namespace SmartphoneAppMessenger
                                 MessageManager.currentPlayerAvatar = destPath;
                                 screen.avatarDraft = destPath;
                                 MessageManager.SavePlayerProfile(ModEntry.Instance.Helper);
+
+                                if (!string.IsNullOrWhiteSpace(MessageManager.currentPlayerAvatar))
+                                {
+                                    TransferManager.SendSelectedAvatar(MessageManager.currentPlayerAvatar);
+                                }
                             }
                             catch (Exception ex)
                             {

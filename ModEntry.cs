@@ -533,9 +533,9 @@ namespace SmartphoneAppMessenger
         {
             int timePassed = Game1.timeOfDay - lastTimeReceiveMessage;
             int baseChance = Config.NewMessageChance == ModConfig.NewMessageChanceLow
-                ? (timePassed - 100) / 100
-                : (timePassed - 100) / 50;
-            baseChance = Math.Min(baseChance, 15);
+                ? (timePassed - 100) / 150
+                : (timePassed - 100) / 90;
+            baseChance = Math.Min(baseChance, 10);
 
             if (Game1.random.NextDouble() < baseChance / 100.0)
             {
@@ -578,7 +578,10 @@ namespace SmartphoneAppMessenger
                         if (!talkedToToday && !Config.DisableDailyMessage)
                         {
                             if (friendship != null)
+                            {
                                 friendship.TalkedToToday = true;
+                                friendship.Points += 20;
+                            }
 
                             npc.checkForNewCurrentDialogue(Game1.player.getFriendshipHeartLevelForNPC(npcName));
 
