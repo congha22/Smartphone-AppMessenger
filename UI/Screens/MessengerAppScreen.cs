@@ -707,20 +707,41 @@ namespace SmartphoneAppMessenger
                 if (this.profileAgeFieldBounds.Contains(x, y))
                 {
                     this.activeProfileField = ProfileField.Age;
-                    this.ageTextBox.SetCursorFromClick(x, this.profileAgeFieldBounds, this.phoneUiScale);
+                    if (Constants.TargetPlatform == GamePlatform.Android)
+                    {
+                        TriggerAndroidKeyboard(this.ageTextBox.Text);
+                    }
+                    else
+                    {
+                        this.ageTextBox.SetCursorFromClick(x, this.profileAgeFieldBounds, this.phoneUiScale);
+                    }
                     Game1.playSound("smallSelect");
                 }
                 else if (this.profileBirthdayFieldBounds.Contains(x, y))
                 {
                     this.activeProfileField = ProfileField.Birthday;
-                    this.birthdayTextBox.SetCursorFromClick(x, this.profileBirthdayFieldBounds, this.phoneUiScale);
+                    if (Constants.TargetPlatform == GamePlatform.Android)
+                    {
+                        TriggerAndroidKeyboard(this.birthdayTextBox.Text);
+                    }
+                    else
+                    {
+                        this.birthdayTextBox.SetCursorFromClick(x, this.profileBirthdayFieldBounds, this.phoneUiScale);
+                    }
                     Game1.playSound("smallSelect");
                 }
                 else if (this.profileDescriptionFieldBounds.Contains(x, y))
                 {
                     this.activeProfileField = ProfileField.AboutMe;
-                    this.aboutMeTextBox.CursorIndex = (this.aboutMeTextBox.Text ?? "").Length;
-                    this.aboutMeTextBox.SelectionAnchorIndex = this.aboutMeTextBox.CursorIndex;
+                    if (Constants.TargetPlatform == GamePlatform.Android)
+                    {
+                        TriggerAndroidKeyboard(this.aboutMeTextBox.Text);
+                    }
+                    else
+                    {
+                        this.aboutMeTextBox.CursorIndex = (this.aboutMeTextBox.Text ?? "").Length;
+                        this.aboutMeTextBox.SelectionAnchorIndex = this.aboutMeTextBox.CursorIndex;
+                    }
                     Game1.playSound("smallSelect");
                 }
                 else if (this.profileSeasonButtonBounds.Contains(x, y))
@@ -1204,7 +1225,24 @@ namespace SmartphoneAppMessenger
                 {
                     if (this.currentState == ScreenState.ProfileEditor)
                     {
-                        ApplyTextInputToActiveField(this.pendingKeyboardTask.Result);
+                        if (this.activeProfileField == ProfileField.Age)
+                        {
+                            this.ageTextBox.Text = this.pendingKeyboardTask.Result;
+                            this.ageTextBox.CursorIndex = this.ageTextBox.Text.Length;
+                            this.ageTextBox.SelectionAnchorIndex = this.ageTextBox.Text.Length;
+                        }
+                        else if (this.activeProfileField == ProfileField.Birthday)
+                        {
+                            this.birthdayTextBox.Text = this.pendingKeyboardTask.Result;
+                            this.birthdayTextBox.CursorIndex = this.birthdayTextBox.Text.Length;
+                            this.birthdayTextBox.SelectionAnchorIndex = this.birthdayTextBox.Text.Length;
+                        }
+                        else if (this.activeProfileField == ProfileField.AboutMe)
+                        {
+                            this.aboutMeTextBox.Text = this.pendingKeyboardTask.Result;
+                            this.aboutMeTextBox.CursorIndex = this.aboutMeTextBox.Text.Length;
+                            this.aboutMeTextBox.SelectionAnchorIndex = this.aboutMeTextBox.Text.Length;
+                        }
                     }
                     else if (this.currentState == ScreenState.NpcList)
                     {
