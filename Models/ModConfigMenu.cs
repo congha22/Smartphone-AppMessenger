@@ -98,6 +98,23 @@ namespace SmartphoneAppMessenger
                 setValue: value => Config.ShowAiCredit = value
             );
 
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => GetTranslation("config.allowed-npc.name"),
+                tooltip: () => GetTranslation("config.allowed-npc.tooltip"),
+                getValue: () => Config.AllowedNpc,
+                setValue: value => Config.AllowedNpc = value
+            );
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => GetTranslation("config.friendship-requirement.name"),
+                tooltip: () => GetTranslation("config.friendship-requirement.tooltip"),
+                getValue: () => Config.FriendshipRequirement,
+                setValue: value => Config.FriendshipRequirement = value,
+                allowedValues: new[] { "Meet", "Friend" }
+            );
+
             // PAGES
             configMenu.AddPageLink(
                 mod: ModManifest,

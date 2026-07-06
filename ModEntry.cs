@@ -416,8 +416,6 @@ namespace SmartphoneAppMessenger
                 return;
             }
 
-            iSmartphoneApi.ContactableNpcsChanged += MessageManager.UpdateAvailableNpcs;
-
 
             this.LoadIcons();
             this.RegisterMessengerApp();

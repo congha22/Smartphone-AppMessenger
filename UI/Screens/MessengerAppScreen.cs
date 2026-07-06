@@ -141,6 +141,32 @@ namespace SmartphoneAppMessenger
             this.Selected = true;
             Game1.keyboardDispatcher.Subscriber = this;
 
+            // Rescan allowed NPCs on app open
+            List<string> validNpcs = new();
+            if (ModEntry.Config != null && !string.IsNullOrWhiteSpace(ModEntry.Config.AllowedNpc))
+            {
+                var names = ModEntry.Config.AllowedNpc.Split(',')
+                    .Select(n => n.Trim())
+                    .Where(n => !string.IsNullOrEmpty(n))
+                    .ToList();
+
+                string req = ModEntry.Config.FriendshipRequirement; // "Meet" or "Friend"
+                int requiredPoints = string.Equals(req, "Friend", StringComparison.OrdinalIgnoreCase) ? 250 : 1;
+
+                foreach (var name in names)
+                {
+                    if (Game1.getCharacterFromName(name) != null)
+                    {
+                        int points = Game1.player.getFriendshipLevelForNPC(name);
+                        if (points >= requiredPoints)
+                        {
+                            validNpcs.Add(name);
+                        }
+                    }
+                }
+            }
+            MessageManager.UpdateAvailableNpcs(validNpcs);
+
             CalculateLayout(rebuildList: true);
         }
 
