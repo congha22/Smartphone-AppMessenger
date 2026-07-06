@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using StardewModdingAPI;
 
 namespace SmartphoneAppMessenger
@@ -52,7 +54,8 @@ namespace SmartphoneAppMessenger
                         Instance.RegisterMessengerApp();
                     }
                     catch { }
-                }
+                },
+                titleScreenOnly: false
             );
 
 
@@ -71,6 +74,24 @@ namespace SmartphoneAppMessenger
                 tooltip: () => GetTranslation("config.language.tooltip"),
                 getValue: () => string.IsNullOrWhiteSpace(Config.Language) ? "English" : Config.Language,
                 setValue: value => Config.Language = string.IsNullOrWhiteSpace(value) ? "English" : value.Trim()
+            );
+
+            string npcProfilePath = Path.Combine(Helper.DirectoryPath, "npc_profile");
+            string[] themeOptions = Directory.Exists(npcProfilePath)
+                ? Directory.GetDirectories(npcProfilePath).Select(Path.GetFileName).Where(name => !string.IsNullOrEmpty(name)).ToArray()!
+                : new[] { "vanilla" };
+            if (themeOptions.Length == 0)
+            {
+                themeOptions = new[] { "vanilla" };
+            }
+
+            configMenu.AddTextOption(
+                mod: ModManifest,
+                name: () => GetTranslation("config.theme.name"),
+                tooltip: () => GetTranslation("config.theme.tooltip"),
+                getValue: () => string.IsNullOrWhiteSpace(Config.NpcProfileTheme) ? "vanilla" : Config.NpcProfileTheme,
+                setValue: value => Config.NpcProfileTheme = string.IsNullOrWhiteSpace(value) ? "vanilla" : value.Trim(),
+                allowedValues: themeOptions
             );
 
 

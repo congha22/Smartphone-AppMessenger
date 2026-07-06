@@ -380,7 +380,7 @@ namespace SmartphoneAppMessenger
             bool isPlayer = Game1.getOnlineFarmers().Any(f => string.Equals(f.Name, this.npcName, StringComparison.OrdinalIgnoreCase))
                             || MessageManager.PlayerConversations.ContainsKey(this.npcName);
 
-            bool chattedToday = isPlayer || MessageManager.NpcMessagesToday.ContainsKey(this.npcName) || (ModEntry.Config?.DisableDailyMessage ?? false);
+            bool chattedToday = isPlayer || MessageManager.NpcMessagesToday.ContainsKey(this.npcName) || ModEntry.Config.DisableDailyMessage;
             if (!chattedToday)
             {
                 NPC? npc = Game1.getCharacterFromName(this.npcName);

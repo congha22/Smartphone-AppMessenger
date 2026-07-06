@@ -44,7 +44,7 @@ namespace SmartphoneAppMessenger
         public string NewMessageChance { get; set; } = NewMessageChanceDefault;
         public string Language { get; set; } = "English";
 
-        public string AllowedNpc { get; set; } = "Alex, Abigail, Haley, Emily, Lewis";
+        public string AllowedNpc { get; set; } = "Abigail, Alex, Caroline, Clint, Demetrius, Dwarf, Elliott, Emily, Evelyn, George, Gus, Haley, Harvey, Jas, Jodi, Kent, Krobus, Leah, Leo, Lewis, Linus, Marnie, Maru, Pam, Penny, Pierre, Robin, Sam, Sandy, Sebastian, Shane, Vincent, Willy, Wizard";
         public string FriendshipRequirement { get; set; } = "Meet";
 
         public string Key { get; set; } = string.Empty;
@@ -55,6 +55,7 @@ namespace SmartphoneAppMessenger
         public string OpenAIKey { get => Key; set => Key = value; }
         public string OpenAIModel { get => Model; set => Model = value; }
         public string CharacteristicMode { get; set; } = CharacteristicModeShort;
+        public string NpcProfileTheme { get; set; } = "vanilla";
 
 
         public int MaxSummaryWordCount { get; set; } = 350;

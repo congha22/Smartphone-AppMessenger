@@ -552,7 +552,7 @@ namespace SmartphoneAppMessenger
                 : text;
             string system = GetSystemMessage(npc, type, allowToolCalling: !string.Equals(provider, AiProviderCustom, StringComparison.OrdinalIgnoreCase));
 
-            // SMonitor.Log(system, LogLevel.Error);
+            SMonitor.Log(system, LogLevel.Error);
 
             string responseMessage = "";
             using (var httpClient = new HttpClient())
@@ -956,9 +956,9 @@ namespace SmartphoneAppMessenger
             {
                 int heartLevel = 0;
                 if (Game1.player.friendshipData.ContainsKey(npc.Name)) heartLevel = (int)Game1.player.friendshipData[npc.Name].Points / 250;
+                bool isDateable = npc.datable.Value;
 
-
-                string relation = heartLevel <= 2 ? "stranger" : heartLevel <= 4 ? "acquaintance" : heartLevel <= 6 ? "close friend" : "best friend";
+                string relation = heartLevel <= 2 ? "very early" : heartLevel <= 4 ? "early" : heartLevel <= 6 ? "middle" : isDateable ? " middle" : "late";
                 bool isDating = Game1.player.friendshipData.TryGetValue(npc.Name, out Friendship friendship) && friendship.IsDating();
                 bool isRoommate = friendship != null && friendship.IsRoommate();
                 bool isMarried = friendship != null && friendship.IsMarried();
@@ -1036,6 +1036,18 @@ namespace SmartphoneAppMessenger
 
                 playerProfile = playerProfile.Length > 150 && string.IsNullOrEmpty(Config.OpenAIKey) ? playerProfile.Substring(0, 150) : playerProfile;
 
+                return ThemeSwich(type, allowToolCalling, npc, playerProfile, npcCharacteristic, relation, data, summary);
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
+
+        private static string ThemeSwich(string type, bool allowToolCalling, NPC npc, string playerProfile, string npcCharacteristic, string relation, string data, string summary)
+        {
+            if (Config.NpcProfileTheme == "vanilla")
+            {
                 if (type == "response")
                 {
                     object[] possibleEvent = allowToolCalling
@@ -1051,7 +1063,7 @@ namespace SmartphoneAppMessenger
                             2. **Slice of Life:** You may occasionally invent new small, random dynamic details happening around you for your response. Be creative and do not be repetitive with your responses. 
 
                             * **{npc.Name} personality:** {npcCharacteristic}
-                            * **Relationship with player:** {relation}
+                            * **Friendship progress with player:** {relation}
                             * **World Context:** {data}
                             * **Conversation History:** {summary}
                             ";
@@ -1068,7 +1080,7 @@ namespace SmartphoneAppMessenger
                             3. **Slice of Life:** You may occasionally invent new small, random dynamic details happening around you for your response. Be creative and do not be repetitive with your responses. Do not invite or suggest the player for an event.
                             
                             * **{npc.Name} personality:** {npcCharacteristic}
-                            * **Relationship with player:** {relation}
+                            * **Friendship progress with player:** {relation}
                             * **Possible events:** {string.Join(", ", possibleEvent)}
                             * **World Context:** {data}
                             * **Conversation History:** {summary}
@@ -1089,7 +1101,7 @@ namespace SmartphoneAppMessenger
                         3. **Slice of Life:** You may occasionally invent new small, random dynamic details happening around you for your response. Be creative and not repetitive with your responses.
 
                         * **{npc.Name} personality:** {npcCharacteristic}
-                        * **Relationship with player:** {relation}
+                        * **Friendship progress with player:** {relation}
                         * **World Context:** {data}
                         * **Conversation History:** {summary}
                         ";
@@ -1106,20 +1118,100 @@ namespace SmartphoneAppMessenger
                         * Base on the relationship with player and the world context, if it's appropriate to invite the player for an event today, then send a text invitation under 20 words. You will select one of these events: {string.Join(", ", possibleEvent)}. Otherwise, do not send any message.
 
                         * **{npc.Name} personality:** {npcCharacteristic}
-                        * **Relationship with player:** {relation}
+                        * **Friendship progress with player:** {relation}
                         * **World Context:** {data}
                         * **Conversation History:** {summary}
                         ";
 
                     return AppendLanguageInstruction(systemMessage);
                 }
-
-                return "";
             }
-            catch (Exception)
+            if (Config.NpcProfileTheme == "you_are_the_king")
             {
-                return "";
+                if (type == "response")
+                {
+                    object[] possibleEvent = allowToolCalling
+                        ? GetToolList(npc, listOnly: true)
+                        : Array.Empty<object>();
+                    var systemMessage = $@"
+                            **Context**
+                            * You are roleplaying as NPC **{npc.Name}**, a loyal courtier in a dark fantasy realm. You are responding to an audience with your absolute Monarch, PLAYER **{Game1.player.Name}**.
+                            * You start as a nobody in the Kingdom, and over the develop progress, you earned the name of yourself in the Monarch and raise your position in the kingdom.
+                            * Monarch Profile: {(Game1.player.IsMale ? "King" : "Queen")}, {MessageManager.currentPlayerAge} age, {playerProfile}
+
+                            **Response Instructions**
+                            1. **Devotion & Tone:** Speak with absolute reverence, deference, or fierce feudal loyalty. Use condensed, high-impact fantasy vocabulary. Your attitude must strictly reflect your NPC development progress and your relationship with the Monarch.
+                            2. **Response:** Reply directly to your Sovereign with a message of <30 words. Keep it sharp and impactful.
+                            3. **Courtly Atmosphere:** Occasionally only, weave in small, dynamic dark fantasy or courtly details happening around you when it fit with the conversation and your position. Avoid repetitiveness.
+
+                            * **Your Profile, Personality and Character development progress:** {npcCharacteristic}
+                            * **Current development progress/relationship with the Monarch:** {relation}
+                            * **Realm Context:** {data}
+                            * **Imperial Chronicle (History):** {summary}
+                            ";
+
+                    if (allowToolCalling && possibleEvent.Any())
+                        systemMessage = $@"
+                            **Context**
+                            * You are roleplaying as NPC **{npc.Name}**, a loyal courtier in a dark fantasy realm. You are responding to an audience with your absolute Monarch, PLAYER **{Game1.player.Name}**.
+                            * Monarch Profile: {(Game1.player.IsMale ? "King" : "Queen")}, {playerProfile}
+
+                            **Response Instructions**
+                            1. **Function call:** When the Monarch commands your attendance or initiates an event found in the possible event list below, you must immediately return the function schedule_event and finish.
+                            2. **Response:** If the Monarch is not commanding an event, reply directly to your Sovereign with a message of <30 words.
+                            3. **Devotion & Tone:** Speak with absolute reverence or fierce loyalty befitting your current court rank. Use high-impact fantasy vocabulary.
+                            4. **Courtly Atmosphere:** You may occasionally weave in small, dynamic dark fantasy or courtly environmental details. Do not presume to invite or suggest an event to your ruler; await their royal command.
+                            
+                            * **Your Profile, Personality and Character development progress:** {npcCharacteristic}
+                            * **Feudal Relationship with Monarch:** {relation}
+                            * **Possible Royal Events/Commands:** {string.Join(", ", possibleEvent)}
+                            * **Realm Context:** {data}
+                            * **Imperial Chronicle (History):** {summary}
+                            ";
+
+                    return AppendLanguageInstruction(systemMessage);
+                }
+                else if (type == "text")
+                {
+                    var systemMessage = $@"
+                        **Context**
+                        * You are roleplaying as NPC **{npc.Name}**, a courtier in a dark fantasy realm. Send an official missive or secret letter to your absolute Monarch, PLAYER **{Game1.player.Name}** ({(Game1.player.IsMale ? "King" : "Queen")}, {MessageManager.currentPlayerAge} age, {playerProfile}) to update them or start a new conversation.
+                        * You start as a nobody in the Kingdom, and over time you earn renown and raise your position in the court. Your message must reflect your current progression.
+
+                        **Response Instructions**
+                        1. **Devotion & Tone:** Keep the message under 30 words. Speak with absolute reverence, tactical deference, or fierce feudal loyalty depending on your rank and relation. Use high-impact fantasy vocabulary.
+                        2. **Courtly Atmosphere:** You may occasionally weave in small, dark fantasy details, court whispers, or regional developments around you. Be creative and avoid repetitiveness.
+
+                        * **Your Profile, Personality and Character development progress:** {npcCharacteristic}
+                        * **Feudal Relationship with Monarch:** {relation}
+                        * **Realm Context:** {data}
+                        * **Imperial Chronicle (History):** {summary}
+                        ";
+                    return AppendLanguageInstruction(systemMessage);
+                }
+                else if (type == "invite")
+                {
+                    object[] possibleEvent = GetToolList(npc, listOnly: true, ignoreBirthdayEvent: true);
+                    var systemMessage = $@"
+                        **Context**
+                        * You are roleplaying as NPC **{npc.Name}**, a courtier in a dark fantasy realm. Send a formal request, invitation, or petition to your absolute Monarch, PLAYER **{Game1.player.Name}** ({(Game1.player.IsMale ? "King" : "Queen")}, {playerProfile}) to request a formal audience, joint counsel, or royal attendance at an event.
+
+                        **Response Instructions**
+                        1. **The Petition:** Based on your current court rank, relationship with the Monarch, and the current realm context, determine if it is appropriate to request the Sovereign's presence today.
+                        2. **Execution:** If appropriate, send a submissive yet compelling invitation under 20 words. You must select exactly one of these available royal events/commands: {string.Join(", ", possibleEvent)}. 
+                        3. **Constraint:** If it is politically inappropriate or if you lack the court standing, do not send any message. Never presume to demand; always humbly petition.
+
+                        * **Your Profile, Personality and Character development progress:** {npcCharacteristic}
+                        * **Feudal Relationship with Monarch:** {relation}
+                        * **Realm Context:** {data}
+                        * **Imperial Chronicle (History):** {summary}
+                        ";
+
+                    return AppendLanguageInstruction(systemMessage);
+                }
             }
+
+            return "";
         }
 
         public static async Task<Dictionary<string, string>> SummaryConversationsBatch(Dictionary<string, string> conversationsByNpc, bool bypassAiLimit = false)
@@ -1198,11 +1290,11 @@ namespace SmartphoneAppMessenger
                 expectedNpcNames.Add(candidate.NpcName);
             }
 
-            var system = "You are the memory manager for multiple NPCs in Stardew Valley. "
+            var system = "You are the memory manager for multiple NPCs in Stardew Valley. The world context can be vanilla or in complete different fantasy base on the conversation. "
                 + "You are provided with two arrays: current memory summaries and today's new conversations with the PLAYER. "
                 + "For each NPC, read the previous memory and the new conversation, then summarize it into an updated memory bank. "
                 + "Focus on factual lore, player preferences, important life events, and the current emotional standing/relationship with the PLAYER. "
-                + $"Keep each NPC summary under {maxAiSummaryLength} words. Remove outdated, trivial, non-memory-value details. "
+                + $"Keep each NPC summary under {maxAiSummaryLength} words. When reached length limit, remove outdated, trivial, non-memory-value details. "
                 + "Return only one valid JSON object with this format: {\"summaries\":{\"NPC Name\":\"updated summary\"}}. ";
 
             system = AppendLanguageInstruction(system);

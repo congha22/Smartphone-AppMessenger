@@ -282,13 +282,15 @@ namespace SmartphoneAppMessenger
             string photoSharedDir = System.IO.Path.Combine(this.Helper.DirectoryPath, "userdata", activeSave, "photo_shared");
             MessageManager.EnforcePhotoSharedRetention(photoSharedDir, Config.PhotoShared);
 
-            string npc_characteristic_minimal = this.Helper.ModContent.GetInternalAssetName("assets/npc_characteristics_minimal.json").BaseName;
-            string npc_characteristic_short = this.Helper.ModContent.GetInternalAssetName("assets/npc_characteristics_short.json").BaseName;
-            string npc_characteristic_long = this.Helper.ModContent.GetInternalAssetName("assets/npc_characteristics_long.json").BaseName;
+            string theme = Config.NpcProfileTheme;
+            if (string.IsNullOrWhiteSpace(theme) || !Directory.Exists(Path.Combine(this.Helper.DirectoryPath, "npc_profile", theme)))
+            {
+                theme = "vanilla";
+            }
 
-            NpcCharacteristicsMinimal = this.Helper.ModContent.Load<Dictionary<string, string>>(npc_characteristic_minimal);
-            NpcCharacteristicsShort = this.Helper.ModContent.Load<Dictionary<string, string>>(npc_characteristic_short);
-            NpcCharacteristicsLong = this.Helper.ModContent.Load<Dictionary<string, string>>(npc_characteristic_long);
+            NpcCharacteristicsMinimal = this.Helper.ModContent.Load<Dictionary<string, string>>($"npc_profile/{theme}/npc_characteristics_minimal.json") ?? new();
+            NpcCharacteristicsShort = this.Helper.ModContent.Load<Dictionary<string, string>>($"npc_profile/{theme}/npc_characteristics_short.json") ?? new();
+            NpcCharacteristicsLong = this.Helper.ModContent.Load<Dictionary<string, string>>($"npc_profile/{theme}/npc_characteristics_long.json") ?? new();
 
             NpcBirthdaysByDate.Clear();
             foreach (var npc in Utility.getAllVillagers())
