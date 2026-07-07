@@ -64,9 +64,23 @@ namespace SmartphoneAppMessenger
         public bool Selected { get; set; }
 
         // State Machine
-        public enum ScreenState { NpcList, ProfileEditor, AvatarPicker }
+        public enum ScreenState { NpcList, ProfileEditor, AvatarPicker, ThemeList, ThemeDetail, NpcDetailText, ThemeHelpText }
         private ScreenState currentState = ScreenState.NpcList;
         public ScreenState CurrentState => this.currentState;
+
+        // Theme Browsing State
+        private string selectedTheme = "vanilla";
+        private string selectedNpcName = "";
+        private int activeTab = 0; // 0 = Overview, 1 = NPC Detail
+        private List<string> availableThemes = new();
+        private string themeOverviewText = "";
+        private Dictionary<string, string> themeCharacteristicsLong = new();
+        private string selectedNpcDetailText = "";
+
+        private Dictionary<string, Rectangle> themeItemBounds = new();
+        private Dictionary<string, Rectangle> themeNpcItemBounds = new();
+        private Rectangle overviewTabBounds;
+        private Rectangle npcDetailTabBounds;
 
         // Profile Editor State
         public enum ProfileField { None, Age, Birthday, AboutMe }
@@ -155,12 +169,19 @@ namespace SmartphoneAppMessenger
 
                 foreach (var name in names)
                 {
-                    if (Game1.getCharacterFromName(name) != null)
+                    var npc = Game1.getCharacterFromName(name);
+                    if (npc != null)
                     {
-                        int points = Game1.player.getFriendshipLevelForNPC(name);
-                        if (points >= requiredPoints)
+                        string npcName = npc.Name;
+                        if (ModEntry.NpcCharacteristicsMinimal.ContainsKey(npcName) &&
+                            ModEntry.NpcCharacteristicsShort.ContainsKey(npcName) &&
+                            ModEntry.NpcCharacteristicsLong.ContainsKey(npcName))
                         {
-                            validNpcs.Add(name);
+                            int points = Game1.player.getFriendshipLevelForNPC(name);
+                            if (points >= requiredPoints)
+                            {
+                                validNpcs.Add(name);
+                            }
                         }
                     }
                 }
@@ -194,24 +215,34 @@ namespace SmartphoneAppMessenger
             Rectangle content = GetContentBounds();
             int fontHeight = (int)Game1.smallFont.MeasureString("A").Y;
             int height = (int)(fontHeight * this.phoneUiScale) + ScaleValue(30);
-            int buttonWidth = height; // Book button is square (height x height)
+            int buttonWidth = height; // Book/Theme buttons are square (height x height)
             int gap = ScaleValue(15);
 
-            // Reduced width search box (20% smaller than totalAvailableWidth * 0.85f)
-
-            int totalAvailableWidth = content.Width - ScaleValue(40) - buttonWidth;
+            // We have 2 buttons now: theme button on left, book button on right.
+            int totalAvailableWidth = content.Width - ScaleValue(40) - 2 * buttonWidth - 2 * gap;
             int searchWidth = (int)(totalAvailableWidth * 0.85f * 0.8f);
 
-            // Center both together horizontally in the content area
-
-            int totalWidth = searchWidth + gap + buttonWidth;
+            // Center all together horizontally: ThemeButton + gap + SearchBox + gap + BookButton
+            int totalWidth = searchWidth + 2 * gap + 2 * buttonWidth;
             int startX = content.X + (content.Width - totalWidth) / 2;
 
+            // The search box starts after the theme button and gap
             return new Rectangle(
-                startX,
+                startX + buttonWidth + gap,
                 content.Bottom - height - ScaleValue(15),
                 searchWidth,
                 height);
+        }
+
+        private Rectangle GetThemeButtonBounds()
+        {
+            Rectangle searchBox = GetSearchBoxBounds();
+            int gap = ScaleValue(15);
+            return new Rectangle(
+                searchBox.X - gap - searchBox.Height,
+                searchBox.Y,
+                searchBox.Height,
+                searchBox.Height);
         }
 
         private Rectangle GetBookButtonBounds()
@@ -227,6 +258,16 @@ namespace SmartphoneAppMessenger
 
         private void CalculateLayout(bool rebuildList = true)
         {
+            if (this.currentState == ScreenState.ThemeList ||
+                this.currentState == ScreenState.ThemeDetail ||
+                this.currentState == ScreenState.NpcDetailText ||
+                this.currentState == ScreenState.ThemeHelpText)
+            {
+                CalculateTabsBounds();
+                CalculateThemeLayout();
+                return;
+            }
+
             Rectangle content = GetContentBounds();
 
             this.npcItemBounds.Clear();
@@ -327,6 +368,22 @@ namespace SmartphoneAppMessenger
             {
                 DrawAvatarPicker(b);
             }
+            else if (this.currentState == ScreenState.ThemeList)
+            {
+                DrawThemeList(b);
+            }
+            else if (this.currentState == ScreenState.ThemeDetail)
+            {
+                DrawThemeDetail(b);
+            }
+            else if (this.currentState == ScreenState.NpcDetailText)
+            {
+                DrawNpcDetailText(b);
+            }
+            else if (this.currentState == ScreenState.ThemeHelpText)
+            {
+                DrawThemeHelpText(b);
+            }
             else
             {
                 // Draw Search box and book button at the bottom (unclipped)
@@ -398,6 +455,14 @@ namespace SmartphoneAppMessenger
                 // Draw EditableTextBox
                 this.filterTextBox.Draw(b, searchBox, 1f * this.phoneUiScale, this.Selected);
             }
+
+            // Draw theme button next to search box on left
+            Rectangle themeBounds = GetThemeButtonBounds();
+            b.Draw(
+                Game1.mouseCursors,
+                themeBounds,
+                new Rectangle(294, 392, 16, 16),
+                Color.White);
 
             // Draw book button next to search box
             Rectangle bookBounds = GetBookButtonBounds();
@@ -640,6 +705,34 @@ namespace SmartphoneAppMessenger
                 this.currentState = ScreenState.NpcList;
                 Game1.playSound("bigDeSelect");
             }
+            else if (this.currentState == ScreenState.NpcDetailText)
+            {
+                this.currentState = ScreenState.ThemeDetail;
+                this.scrollOffset = 0;
+                CalculateThemeLayout();
+                Game1.playSound("bigDeSelect");
+            }
+            else if (this.currentState == ScreenState.ThemeHelpText)
+            {
+                this.currentState = ScreenState.ThemeList;
+                this.scrollOffset = 0;
+                CalculateThemeLayout();
+                Game1.playSound("bigDeSelect");
+            }
+            else if (this.currentState == ScreenState.ThemeDetail)
+            {
+                this.currentState = ScreenState.ThemeList;
+                this.scrollOffset = 0;
+                CalculateThemeLayout();
+                Game1.playSound("bigDeSelect");
+            }
+            else if (this.currentState == ScreenState.ThemeList)
+            {
+                this.currentState = ScreenState.NpcList;
+                this.scrollOffset = 0;
+                CalculateLayout(rebuildList: false);
+                Game1.playSound("bigDeSelect");
+            }
             else
             {
                 if (Game1.keyboardDispatcher.Subscriber == this)
@@ -698,25 +791,32 @@ namespace SmartphoneAppMessenger
                 return;
             }
 
-            if (this.currentState == ScreenState.NpcList)
+            if (this.currentState == ScreenState.NpcList ||
+                this.currentState == ScreenState.ThemeList ||
+                this.currentState == ScreenState.ThemeDetail ||
+                this.currentState == ScreenState.NpcDetailText ||
+                this.currentState == ScreenState.ThemeHelpText)
             {
-                // Always select and focus search box when clicking within app content
-                Rectangle contentRect = GetContentBounds();
-                if (contentRect.Contains(x, y))
+                if (this.currentState == ScreenState.NpcList)
                 {
-                    this.Selected = true;
-                    Game1.keyboardDispatcher.Subscriber = this;
-
-                    Rectangle searchBox = GetSearchBoxBounds();
-                    if (searchBox.Contains(x, y))
+                    // Always select and focus search box when clicking within app content
+                    Rectangle contentRect = GetContentBounds();
+                    if (contentRect.Contains(x, y))
                     {
-                        if (Constants.TargetPlatform == GamePlatform.Android)
+                        this.Selected = true;
+                        Game1.keyboardDispatcher.Subscriber = this;
+
+                        Rectangle searchBox = GetSearchBoxBounds();
+                        if (searchBox.Contains(x, y))
                         {
-                            TriggerAndroidKeyboard(this.filterTextBox.Text);
-                        }
-                        else
-                        {
-                            this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
+                            if (Constants.TargetPlatform == GamePlatform.Android)
+                            {
+                                TriggerAndroidKeyboard(this.filterTextBox.Text);
+                            }
+                            else
+                            {
+                                this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
+                            }
                         }
                     }
                 }
@@ -895,7 +995,11 @@ namespace SmartphoneAppMessenger
         public override void receiveScrollWheelAction(int direction)
         {
             base.receiveScrollWheelAction(direction);
-            if (this.currentState != ScreenState.NpcList)
+            if (this.currentState != ScreenState.NpcList &&
+                this.currentState != ScreenState.ThemeList &&
+                this.currentState != ScreenState.ThemeDetail &&
+                this.currentState != ScreenState.NpcDetailText &&
+                this.currentState != ScreenState.ThemeHelpText)
                 return;
 
             int scrollAmount = ScaleValue(40);
@@ -914,25 +1018,56 @@ namespace SmartphoneAppMessenger
         {
             base.releaseLeftClick(x, y);
 
-            if (this.currentState == ScreenState.NpcList && !this.hasTouchScrolled)
+            if (!this.hasTouchScrolled)
             {
-                Rectangle contentRect = GetContentBounds();
-                if (contentRect.Contains(x, y))
+                if (this.currentState == ScreenState.ThemeList)
                 {
-                    Rectangle searchBox = GetSearchBoxBounds();
-                    Rectangle bookBounds = GetBookButtonBounds();
-
-                    if (searchBox.Contains(x, y))
+                    HandleThemeListClick(x, y);
+                }
+                else if (this.currentState == ScreenState.ThemeDetail)
+                {
+                    HandleThemeDetailClick(x, y);
+                }
+                else if (this.currentState == ScreenState.NpcDetailText)
+                {
+                    HandleNpcDetailTextClick(x, y);
+                }
+                else if (this.currentState == ScreenState.ThemeHelpText)
+                {
+                    HandleThemeHelpTextClick(x, y);
+                }
+                else if (this.currentState == ScreenState.NpcList)
+                {
+                    Rectangle contentRect = GetContentBounds();
+                    if (contentRect.Contains(x, y))
                     {
-                        return; // Handled in receiveLeftClick
-                    }
+                        Rectangle searchBox = GetSearchBoxBounds();
+                        Rectangle bookBounds = GetBookButtonBounds();
+                        Rectangle themeBounds = GetThemeButtonBounds();
 
-                    if (bookBounds.Contains(x, y))
-                    {
-                        Game1.playSound("smallSelect");
-                        OpenProfileEditor();
-                        return;
-                    }
+                        if (searchBox.Contains(x, y))
+                        {
+                            return; // Handled in receiveLeftClick
+                        }
+
+                        ModEntry.Instance.Monitor.Log($"releaseLeftClick: x={x}, y={y}, hasTouchScrolled={this.hasTouchScrolled}, currentState={this.currentState}", LogLevel.Debug);
+                        ModEntry.Instance.Monitor.Log($"themeBounds: {themeBounds}, bookBounds: {bookBounds}, searchBox: {searchBox}", LogLevel.Debug);
+
+                        if (themeBounds.Contains(x, y))
+                        {
+                            ModEntry.Instance.Monitor.Log("Theme button clicked! Calling OpenThemeList...", LogLevel.Debug);
+                            Game1.playSound("smallSelect");
+                            OpenThemeList();
+                            return;
+                        }
+
+                        if (bookBounds.Contains(x, y))
+                        {
+                            ModEntry.Instance.Monitor.Log("Book button clicked! Calling OpenProfileEditor...", LogLevel.Debug);
+                            Game1.playSound("smallSelect");
+                            OpenProfileEditor();
+                            return;
+                        }
 
                     Rectangle sBox = GetSearchBoxBounds();
                     int searchBoxAreaHeight = sBox.Height + ScaleValue(25);
@@ -1023,6 +1158,7 @@ namespace SmartphoneAppMessenger
                     }
                 }
             }
+        }
 
             this.isDragging = false;
             this.isScrolling = false;
@@ -1037,7 +1173,11 @@ namespace SmartphoneAppMessenger
                 Rectangle frameBounds = GetFrameBounds();
                 Rectangle contentBounds = GetContentBounds();
 
-                if (this.currentState == ScreenState.NpcList && contentBounds.Contains(x, y))
+                if ((this.currentState == ScreenState.NpcList ||
+                     this.currentState == ScreenState.ThemeList ||
+                     this.currentState == ScreenState.ThemeDetail ||
+                     this.currentState == ScreenState.NpcDetailText ||
+                     this.currentState == ScreenState.ThemeHelpText) && contentBounds.Contains(x, y))
                 {
                     this.isScrolling = true;
                     this.lastScrollMouseY = y;
@@ -1111,6 +1251,15 @@ namespace SmartphoneAppMessenger
                 }
 
                 CalculateLayout(rebuildList: false);
+
+                if (this.currentState == ScreenState.ThemeList ||
+                    this.currentState == ScreenState.ThemeDetail ||
+                    this.currentState == ScreenState.NpcDetailText ||
+                    this.currentState == ScreenState.ThemeHelpText)
+                {
+                    CalculateTabsBounds();
+                    CalculateThemeLayout();
+                }
             }
 
             // Handle sorting delay

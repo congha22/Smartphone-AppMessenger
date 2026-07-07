@@ -95,5 +95,15 @@
   "season.spring": "Spring",
   "season.summer": "Summer",
   "season.fall": "Fall",
-  "season.winter": "Winter"
+  "season.winter": "Winter",
+  "theme.no-description": "No description available.",
+  "theme.error-description": "Error loading description.",
+  "theme.select-theme": "Theme Overview",
+  "theme.active-suffix": " (Active)",
+  "theme.tab.overview": "Overview",
+  "theme.tab.supported-npc": "Supported NPC",
+  "theme.npc-profile-title": "{{npc}} Profile",
+  "theme.help-title": "Customization Instructions",
+  "theme.help-content": "Currently, create custom themes are not supported, but you can add new NPCs or modify existing NPC!\n\nHow to:\n1. Inside mod folder, you will see the 'npc_profile' containing all themes.\n2. Inside each folder, there are 3 npc_characteristics files.\n3. To add a new NPC, simply add a new row to these files using the NPC's internal name as the key, and their description as the value. For example:\n \"MyOwnMod.MyNpc\": \"He is a good guy\"\n4. Always modify all 3 files using different levels of detail:\n   - '_long': Write as much detail as possible (e.g., personality, relationships, backstory).\n   - '_short': BASED ON THE LONG VERSION, reduce it until meet the length limit. Try to retain as much detail as possible.\n   - '_minimal': Similarly.\n5. Tip: You can easily generate these! Copy the NPC's dialogue files, paste them into ChatGPT, and ask it to write an NPC profile matching the theme and fitting the length limits.\n6. When done, copy the entire text and paste to this website to verify the syntax is correct: jsonlint.com \n\nLength Limits (longer text will be cut off when loading):\n- Long: Up to 2000 characters\n- Short: Up to 800 characters\n- Minimal: Up to 400 characters\n\nFor best quality, please use English.\n\nPermissions & Limitations:\n- Please ensure that the creator of the NPC mod allows AI usage on their assets.",
+  "theme.change-config-note": "Change your option in Config"
 }
