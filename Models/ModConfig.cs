@@ -44,16 +44,12 @@ namespace SmartphoneAppMessenger
         public string NewMessageChance { get; set; } = NewMessageChanceDefault;
         public string Language { get; set; } = "English";
 
-        public string AllowedNpc { get; set; } = "Abigail, Alex, Caroline, Clint, Demetrius, Dwarf, Elliott, Emily, Evelyn, George, Gus, Haley, Harvey, Jas, Jodi, Kent, Krobus, Leah, Leo, Lewis, Linus, Marnie, Maru, Pam, Penny, Pierre, Robin, Sam, Sandy, Sebastian, Shane, Vincent, Willy, Wizard";
+        public string AllowedNpc { get; set; } = "Abigail, Alex, Caroline, Clint, Demetrius, Elliott, Emily, Evelyn, George, Gus, Haley, Harvey, Jas, Jodi, Kent, Leah, Leo, Lewis, Linus, Marnie, Maru, Pam, Penny, Pierre, Robin, Sam, Sandy, Sebastian, Shane, Vincent, Willy, Wizard, Alesia, Andy, Camilla, Claire, Gunther, Isaac, MarlonFay, Martin, MorrisTod, Olivia, Sophia, Susan, Scarlett, Victor";
         public string FriendshipRequirement { get; set; } = "Meet";
 
         public string Key { get; set; } = string.Empty;
         public string Model { get; set; } = OpenAIModel_54mini;
 
-
-        // Legacy aliases for older config.json files.
-        public string OpenAIKey { get => Key; set => Key = value; }
-        public string OpenAIModel { get => Model; set => Model = value; }
         public string CharacteristicMode { get; set; } = CharacteristicModeShort;
         public string NpcProfileTheme { get; set; } = "vanilla";
 

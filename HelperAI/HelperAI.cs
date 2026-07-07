@@ -552,7 +552,7 @@ namespace SmartphoneAppMessenger
                 : text;
             string system = GetSystemMessage(npc, type, allowToolCalling: !string.Equals(provider, AiProviderCustom, StringComparison.OrdinalIgnoreCase));
 
-            SMonitor.Log(system, LogLevel.Error);
+            // SMonitor.Log(system, LogLevel.Error);
 
             string responseMessage = "";
             using (var httpClient = new HttpClient())
@@ -1034,7 +1034,7 @@ namespace SmartphoneAppMessenger
                 var npcCharacteristic = GetNpcCharacteristicForPrompt(npc);
                 string playerProfile = MessageManager.currentPlayerProfile;
 
-                playerProfile = playerProfile.Length > 150 && string.IsNullOrEmpty(Config.OpenAIKey) ? playerProfile.Substring(0, 150) : playerProfile;
+                playerProfile = playerProfile.Length > 150 && string.IsNullOrEmpty(Config.Key) ? playerProfile.Substring(0, 150) : playerProfile;
 
                 return ThemeSwich(type, allowToolCalling, npc, playerProfile, npcCharacteristic, relation, data, summary);
             }

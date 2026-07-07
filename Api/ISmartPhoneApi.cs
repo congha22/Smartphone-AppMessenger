@@ -244,12 +244,6 @@ namespace SmartphoneAppMessenger
         // =========================================================
 
         /// <summary>
-        /// Event that fires whenever the list of contactable NPCs changes.
-        /// Receives the updated list of NPC internal names.
-        /// </summary>
-        event Action<List<string>> ContactableNpcsChanged;
-
-        /// <summary>
         /// Registers a new custom card under the contact info screen, allowing up to 4 buttons.
         /// </summary>
         /// <param name="modId">The unique ID of the mod registering the card.</param>
