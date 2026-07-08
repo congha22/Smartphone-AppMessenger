@@ -8,20 +8,15 @@ namespace SmartphoneAppMessenger
     {
         public static bool IsTextInputActive(IClickableMenu menu)
         {
-            if (Game1.activeClickableMenu != menu)
-            {
-                return false;
-            }
-
             if (menu is MessengerAppScreen appScreen)
             {
                 if (appScreen.CurrentState == MessengerAppScreen.ScreenState.NpcList)
                 {
-                    return appScreen.Selected && Game1.keyboardDispatcher.Subscriber == appScreen;
+                    return appScreen.Selected;
                 }
                 else if (appScreen.CurrentState == MessengerAppScreen.ScreenState.ProfileEditor)
                 {
-                    return appScreen.IsAnyProfileFieldActive() && Game1.keyboardDispatcher.Subscriber == appScreen;
+                    return appScreen.IsAnyProfileFieldActive();
                 }
             }
             else if (menu is MessengerChatScreen chatScreen)

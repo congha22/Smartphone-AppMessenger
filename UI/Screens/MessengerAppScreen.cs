@@ -151,7 +151,9 @@ namespace SmartphoneAppMessenger
                 this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
             }
 
-            this.Selected = false;
+            // Always select and focus search box
+            this.Selected = true;
+            Game1.keyboardDispatcher.Subscriber = this;
 
             // Rescan allowed NPCs on app open
             List<string> validNpcs = new();
@@ -797,27 +799,24 @@ namespace SmartphoneAppMessenger
             {
                 if (this.currentState == ScreenState.NpcList)
                 {
-                    Rectangle searchBox = GetSearchBoxBounds();
-                    if (searchBox.Contains(x, y))
+                    // Always select and focus search box when clicking within app content
+                    Rectangle contentRect = GetContentBounds();
+                    if (contentRect.Contains(x, y))
                     {
                         this.Selected = true;
                         Game1.keyboardDispatcher.Subscriber = this;
 
-                        if (Constants.TargetPlatform == GamePlatform.Android)
+                        Rectangle searchBox = GetSearchBoxBounds();
+                        if (searchBox.Contains(x, y))
                         {
-                            TriggerAndroidKeyboard(this.filterTextBox.Text);
-                        }
-                        else
-                        {
-                            this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
-                        }
-                    }
-                    else
-                    {
-                        this.Selected = false;
-                        if (Game1.keyboardDispatcher.Subscriber == this)
-                        {
-                            Game1.keyboardDispatcher.Subscriber = null;
+                            if (Constants.TargetPlatform == GamePlatform.Android)
+                            {
+                                TriggerAndroidKeyboard(this.filterTextBox.Text);
+                            }
+                            else
+                            {
+                                this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
+                            }
                         }
                     }
                 }
@@ -1208,23 +1207,34 @@ namespace SmartphoneAppMessenger
 
         public override void update(GameTime time)
         {
-            if (Game1.activeClickableMenu != this)
+            bool isMenuOpened = Game1.activeClickableMenu == this;
+
+            base.update(time);
+
+            this.filterTextBox.Update(time, isMenuOpened && this.Selected && this.currentState == ScreenState.NpcList);
+            this.ageTextBox.Update(time, isMenuOpened && this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.Age);
+            this.birthdayTextBox.Update(time, isMenuOpened && this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.Birthday);
+            this.aboutMeTextBox.Update(time, isMenuOpened && this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.AboutMe);
+
+            UpdateAndroidKeyboard();
+
+            if (isMenuOpened)
             {
-                this.Selected = false;
+                // Always enforce keyboard focus for typing
+                if (Game1.keyboardDispatcher.Subscriber != this)
+                {
+                    Game1.keyboardDispatcher.Subscriber = this;
+                    this.Selected = true;
+                }
+            }
+            else
+            {
                 if (Game1.keyboardDispatcher.Subscriber == this)
                 {
                     Game1.keyboardDispatcher.Subscriber = null;
                 }
+                this.Selected = false;
             }
-
-            base.update(time);
-
-            this.filterTextBox.Update(time, this.Selected && this.currentState == ScreenState.NpcList);
-            this.ageTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.Age);
-            this.birthdayTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.Birthday);
-            this.aboutMeTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.AboutMe);
-
-            UpdateAndroidKeyboard();
 
             // Sync from API if modified externally
             float activeScale = this.smartphoneApi.GetPhoneUiScale();
@@ -1457,17 +1467,8 @@ namespace SmartphoneAppMessenger
                 this.phoneContentOffsetY = 166;
                 this.width = this.phoneFrameWidth;
                 this.height = this.phoneFrameHeight;
-
-                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
-                {
-                    this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
-                    this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
-                }
-                else
-                {
-                    this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
-                    this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
-                }
+                this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
 
                 this.xPositionOnScreen = -this.phoneContentOffsetX;
                 this.yPositionOnScreen = -this.phoneContentOffsetY;
