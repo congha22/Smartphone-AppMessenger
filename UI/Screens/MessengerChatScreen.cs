@@ -84,7 +84,7 @@ namespace SmartphoneAppMessenger
         // Custom Text Editor State
         private EditableTextBox chatTextBox = new();
         private double textCursorBlinkElapsedSeconds = 0d;
-        private MessengerTextInputSubscriber? textInputSubscriber;
+        internal MessengerTextInputSubscriber? textInputSubscriber;
 
         private static ISmartPhoneApi? iSmartphoneApi => ModEntry.iSmartphoneApi;
 
@@ -147,7 +147,6 @@ namespace SmartphoneAppMessenger
             this.lastMessageCount = messages.Count;
             RebuildChatBubbles();
             this.textInputSubscriber = new MessengerTextInputSubscriber(this);
-            Game1.keyboardDispatcher.Subscriber = this.textInputSubscriber;
         }
 
         private void RebuildChatBubbles()
@@ -1194,6 +1193,7 @@ namespace SmartphoneAppMessenger
             {
                 if (this.chatInputBounds.Contains(x, y))
                 {
+                    Game1.keyboardDispatcher.Subscriber = this.textInputSubscriber;
                     if (Constants.TargetPlatform == GamePlatform.Android)
                     {
                         TriggerAndroidKeyboard(this.chatTextBox.Text);
@@ -1203,13 +1203,20 @@ namespace SmartphoneAppMessenger
                         this.chatTextBox.SetCursorFromClick(x, this.chatInputBounds, this.phoneUiScale);
                     }
                 }
-
-                if (this.sendButton != null && this.sendButton.containsPoint(x, y))
+                else
                 {
-                    SendMessage();
-                    Game1.playSound("bigSelect");
-                    return;
+                    if (Game1.keyboardDispatcher.Subscriber == this.textInputSubscriber)
+                    {
+                        Game1.keyboardDispatcher.Subscriber = null;
+                    }
                 }
+            }
+
+            if (this.sendButton != null && this.sendButton.containsPoint(x, y))
+            {
+                SendMessage();
+                Game1.playSound("bigSelect");
+                return;
             }
         }
 
@@ -1258,7 +1265,7 @@ namespace SmartphoneAppMessenger
 
         public bool IsChatInputActive()
         {
-            return !this.chatInputBounds.IsEmpty;
+            return !this.chatInputBounds.IsEmpty && Game1.keyboardDispatcher.Subscriber == this.textInputSubscriber;
         }
 
         public override void receiveKeyPress(Keys key)
@@ -1322,6 +1329,16 @@ namespace SmartphoneAppMessenger
 
         public override void update(GameTime time)
         {
+            if (Game1.activeClickableMenu != this)
+            {
+                if (Game1.keyboardDispatcher.Subscriber == this.textInputSubscriber)
+                {
+                    Game1.keyboardDispatcher.Subscriber = null;
+                }
+            }
+
+            base.update(time);
+
             // Sync from API if modified externally
             float activeScale = this.smartphoneApi.GetPhoneUiScale();
             if (Math.Abs(this.phoneUiScale - activeScale) > 0.001f)

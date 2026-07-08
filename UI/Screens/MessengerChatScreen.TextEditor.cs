@@ -14,7 +14,7 @@ namespace SmartphoneAppMessenger
 {
     public partial class MessengerChatScreen : IClickableMenu
     {
-        private sealed class MessengerTextInputSubscriber : IKeyboardSubscriber
+        internal sealed class MessengerTextInputSubscriber : IKeyboardSubscriber
         {
             private readonly MessengerChatScreen owner;
 

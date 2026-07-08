@@ -151,9 +151,7 @@ namespace SmartphoneAppMessenger
                 this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
             }
 
-            // Always select and focus search box
-            this.Selected = true;
-            Game1.keyboardDispatcher.Subscriber = this;
+            this.Selected = false;
 
             // Rescan allowed NPCs on app open
             List<string> validNpcs = new();
@@ -799,24 +797,27 @@ namespace SmartphoneAppMessenger
             {
                 if (this.currentState == ScreenState.NpcList)
                 {
-                    // Always select and focus search box when clicking within app content
-                    Rectangle contentRect = GetContentBounds();
-                    if (contentRect.Contains(x, y))
+                    Rectangle searchBox = GetSearchBoxBounds();
+                    if (searchBox.Contains(x, y))
                     {
                         this.Selected = true;
                         Game1.keyboardDispatcher.Subscriber = this;
 
-                        Rectangle searchBox = GetSearchBoxBounds();
-                        if (searchBox.Contains(x, y))
+                        if (Constants.TargetPlatform == GamePlatform.Android)
                         {
-                            if (Constants.TargetPlatform == GamePlatform.Android)
-                            {
-                                TriggerAndroidKeyboard(this.filterTextBox.Text);
-                            }
-                            else
-                            {
-                                this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
-                            }
+                            TriggerAndroidKeyboard(this.filterTextBox.Text);
+                        }
+                        else
+                        {
+                            this.filterTextBox.SetCursorFromClick(x, searchBox, 0.8f * this.phoneUiScale);
+                        }
+                    }
+                    else
+                    {
+                        this.Selected = false;
+                        if (Game1.keyboardDispatcher.Subscriber == this)
+                        {
+                            Game1.keyboardDispatcher.Subscriber = null;
                         }
                     }
                 }
@@ -1207,6 +1208,15 @@ namespace SmartphoneAppMessenger
 
         public override void update(GameTime time)
         {
+            if (Game1.activeClickableMenu != this)
+            {
+                this.Selected = false;
+                if (Game1.keyboardDispatcher.Subscriber == this)
+                {
+                    Game1.keyboardDispatcher.Subscriber = null;
+                }
+            }
+
             base.update(time);
 
             this.filterTextBox.Update(time, this.Selected && this.currentState == ScreenState.NpcList);
@@ -1215,13 +1225,6 @@ namespace SmartphoneAppMessenger
             this.aboutMeTextBox.Update(time, this.Selected && this.currentState == ScreenState.ProfileEditor && this.activeProfileField == ProfileField.AboutMe);
 
             UpdateAndroidKeyboard();
-
-            // Always enforce keyboard focus for typing
-            if (Game1.keyboardDispatcher.Subscriber != this)
-            {
-                Game1.keyboardDispatcher.Subscriber = this;
-                this.Selected = true;
-            }
 
             // Sync from API if modified externally
             float activeScale = this.smartphoneApi.GetPhoneUiScale();
@@ -1454,8 +1457,17 @@ namespace SmartphoneAppMessenger
                 this.phoneContentOffsetY = 166;
                 this.width = this.phoneFrameWidth;
                 this.height = this.phoneFrameHeight;
-                this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
-                this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
+                    this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
+                }
+                else
+                {
+                    this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                    this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+                }
 
                 this.xPositionOnScreen = -this.phoneContentOffsetX;
                 this.yPositionOnScreen = -this.phoneContentOffsetY;
