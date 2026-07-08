@@ -1467,8 +1467,16 @@ namespace SmartphoneAppMessenger
                 this.phoneContentOffsetY = 166;
                 this.width = this.phoneFrameWidth;
                 this.height = this.phoneFrameHeight;
-                this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
-                this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
+                    this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
+                }
+                else
+                {
+                    this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                    this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+                }
 
                 this.xPositionOnScreen = -this.phoneContentOffsetX;
                 this.yPositionOnScreen = -this.phoneContentOffsetY;
