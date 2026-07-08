@@ -549,6 +549,9 @@ namespace SmartphoneAppMessenger
 
         private void UpdateMessengerPassiveHud(GameTime time)
         {
+            if (Game1.activeClickableMenu == this.activeScreen)
+                return;
+
             if (Game1.activeClickableMenu is MessengerAppScreen appScreen)
                 this.activeScreen = appScreen;
             else if (Game1.activeClickableMenu is MessengerChatScreen chatScreen)
@@ -565,11 +568,15 @@ namespace SmartphoneAppMessenger
             if (!Context.IsWorldReady || iSmartphoneApi == null)
                 return;
  
-            var screen = new MessengerAppScreen(
-                iSmartphoneApi,
-                () => iSmartphoneApi.OpenPhoneHomeScreen());
-            this.activeScreen = screen;
-            Game1.activeClickableMenu = screen;
+            bool resume = iSmartphoneApi.IsHudPinned() && string.Equals(iSmartphoneApi.GetPinnedAppId(), $"{this.ModManifest.UniqueID}::{AppId}");
+            if (!resume || this.activeScreen == null)
+            {
+                var screen = new MessengerAppScreen(
+                    iSmartphoneApi,
+                    () => iSmartphoneApi.OpenPhoneHomeScreen());
+                this.activeScreen = screen;
+            }
+            Game1.activeClickableMenu = this.activeScreen;
         }
 
         public static void CheckSendNewMessage()

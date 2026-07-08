@@ -1322,7 +1322,14 @@ namespace SmartphoneAppMessenger
 
         public override void update(GameTime time)
         {
-            if (Game1.activeClickableMenu != this)
+            if (Game1.activeClickableMenu == this)
+            {
+                if (Game1.keyboardDispatcher.Subscriber != this.textInputSubscriber)
+                {
+                    Game1.keyboardDispatcher.Subscriber = this.textInputSubscriber;
+                }
+            }
+            else
             {
                 if (Game1.keyboardDispatcher.Subscriber == this.textInputSubscriber)
                 {
