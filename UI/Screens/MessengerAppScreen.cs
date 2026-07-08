@@ -1430,5 +1430,112 @@ namespace SmartphoneAppMessenger
                 this.pendingKeyboardTask = null;
             }
         }
+
+        public void DrawScreenContent(SpriteBatch b, Rectangle content)
+        {
+            float oldScale = this.phoneUiScale;
+            int oldX = this.xPositionOnScreen;
+            int oldY = this.yPositionOnScreen;
+            int oldWidth = this.width;
+            int oldHeight = this.height;
+            int oldPhoneWidth = this.phoneFrameWidth;
+            int oldPhoneHeight = this.phoneFrameHeight;
+            int oldContentOffsetX = this.phoneContentOffsetX;
+            int oldContentOffsetY = this.phoneContentOffsetY;
+            int oldContentWidth = this.contentWidth;
+            int oldContentHeight = this.contentHeight;
+
+            try
+            {
+                this.phoneUiScale = 1f;
+                this.phoneFrameWidth = 700;
+                this.phoneFrameHeight = 1100;
+                this.phoneContentOffsetX = 90;
+                this.phoneContentOffsetY = 166;
+                this.width = this.phoneFrameWidth;
+                this.height = this.phoneFrameHeight;
+                this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+
+                this.xPositionOnScreen = -this.phoneContentOffsetX;
+                this.yPositionOnScreen = -this.phoneContentOffsetY;
+
+                CalculateLayout(rebuildList: true);
+
+                // Draw background wallpaper
+                Rectangle contentRect = GetContentBounds();
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    b.Draw(this.phoneBackgroundTexture, contentRect, Color.White);
+                }
+                else
+                {
+                    b.Draw(Game1.staminaRect, contentRect, new Color(30, 30, 30));
+                }
+
+                if (this.currentState == ScreenState.ProfileEditor)
+                {
+                    DrawProfileEditor(b);
+                }
+                else if (this.currentState == ScreenState.AvatarPicker)
+                {
+                    DrawAvatarPicker(b);
+                }
+                else if (this.currentState == ScreenState.ThemeList)
+                {
+                    DrawThemeList(b);
+                }
+                else if (this.currentState == ScreenState.ThemeDetail)
+                {
+                    DrawThemeDetail(b);
+                }
+                else if (this.currentState == ScreenState.NpcDetailText)
+                {
+                    DrawNpcDetailText(b);
+                }
+                else if (this.currentState == ScreenState.ThemeHelpText)
+                {
+                    DrawThemeHelpText(b);
+                }
+                else
+                {
+                    DrawSearchArea(b);
+
+                    Rectangle searchBox = GetSearchBoxBounds();
+                    int searchBoxAreaHeight = searchBox.Height + ScaleValue(25);
+                    Rectangle listClipRect = new Rectangle(
+                        contentRect.X,
+                        contentRect.Y + ScaleValue(5),
+                        contentRect.Width,
+                        contentRect.Height - searchBoxAreaHeight);
+
+                    b.End();
+                    b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, new RasterizerState() { ScissorTestEnable = true });
+                    Rectangle previousScissor = Game1.graphics.GraphicsDevice.ScissorRectangle;
+                    Game1.graphics.GraphicsDevice.ScissorRectangle = listClipRect;
+
+                    DrawScrollableContent(b, contentRect);
+
+                    b.End();
+                    Game1.graphics.GraphicsDevice.ScissorRectangle = previousScissor;
+                    b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+                }
+            }
+            finally
+            {
+                this.phoneUiScale = oldScale;
+                this.xPositionOnScreen = oldX;
+                this.yPositionOnScreen = oldY;
+                this.width = oldWidth;
+                this.height = oldHeight;
+                this.phoneFrameWidth = oldPhoneWidth;
+                this.phoneFrameHeight = oldPhoneHeight;
+                this.phoneContentOffsetX = oldContentOffsetX;
+                this.phoneContentOffsetY = oldContentOffsetY;
+                this.contentWidth = oldContentWidth;
+                this.contentHeight = oldContentHeight;
+                CalculateLayout(rebuildList: true);
+            }
+        }
     }
 }

@@ -10,6 +10,7 @@ using Smartphone;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using StardewValley.Menus;
 
 namespace SmartphoneAppMessenger
 {
@@ -40,6 +41,7 @@ namespace SmartphoneAppMessenger
         private Texture2D? appIcon;
         private Dictionary<string, Texture2D> themedIcons = new(StringComparer.OrdinalIgnoreCase);
         public static Texture2D? PortraitBackgroundTexture { get; private set; }
+        private IClickableMenu? activeScreen;
 
         // Message queue fields
         public static readonly object replyQueueLock = new();
@@ -490,8 +492,17 @@ namespace SmartphoneAppMessenger
             if (!appRegistered)
             {
                 this.Monitor.Log("Failed to register Messenger app.", LogLevel.Warn);
+                return;
             }
 
+            iSmartphoneApi.RegisterPassiveHudCallback(
+                ownerModId: this.ModManifest.UniqueID,
+                appId: AppId,
+                onDrawHudScreen: this.DrawMessengerPassiveHud,
+                onUpdateHudScreen: this.UpdateMessengerPassiveHud,
+                landscape: false
+            );
+ 
             // Register Contact Action Card for Messenger
             List<IContactActionCardButton> buttons = new List<IContactActionCardButton>
             {
@@ -504,29 +515,61 @@ namespace SmartphoneAppMessenger
                     {
                         if (iSmartphoneApi == null) return;
                         MessageManager.UnreadCounts[npcName] = 0;
-                        Game1.activeClickableMenu = new MessengerChatScreen(
+                        var chatScreen = new MessengerChatScreen(
                             iSmartphoneApi,
                             npcName,
                             () =>
                             {
                                 MessageManager.UnreadCounts[npcName] = 0;
-                                Game1.activeClickableMenu = new MessengerAppScreen(iSmartphoneApi, () => iSmartphoneApi.OpenPhoneHomeScreen());
+                                var appScreen = new MessengerAppScreen(iSmartphoneApi, () => iSmartphoneApi.OpenPhoneHomeScreen());
+                                this.activeScreen = appScreen;
+                                Game1.activeClickableMenu = appScreen;
                             }
                         );
+                        this.activeScreen = chatScreen;
+                        Game1.activeClickableMenu = chatScreen;
                     }
                 }
             };
             iSmartphoneApi.RegisterContactActionCard(this.ModManifest.UniqueID, GetTranslation("app.name"), buttons);
         }
 
+        private void DrawMessengerPassiveHud(SpriteBatch b, Rectangle rect)
+        {
+            if (Game1.activeClickableMenu is MessengerAppScreen appScreen)
+                this.activeScreen = appScreen;
+            else if (Game1.activeClickableMenu is MessengerChatScreen chatScreen)
+                this.activeScreen = chatScreen;
+
+            if (this.activeScreen is MessengerAppScreen asApp)
+                asApp.DrawScreenContent(b, rect);
+            else if (this.activeScreen is MessengerChatScreen asChat)
+                asChat.DrawScreenContent(b, rect);
+        }
+
+        private void UpdateMessengerPassiveHud(GameTime time)
+        {
+            if (Game1.activeClickableMenu is MessengerAppScreen appScreen)
+                this.activeScreen = appScreen;
+            else if (Game1.activeClickableMenu is MessengerChatScreen chatScreen)
+                this.activeScreen = chatScreen;
+
+            if (this.activeScreen is MessengerAppScreen asApp)
+                asApp.update(time);
+            else if (this.activeScreen is MessengerChatScreen asChat)
+                asChat.update(time);
+        }
+
         private void OpenMessengerApp()
         {
             if (!Context.IsWorldReady || iSmartphoneApi == null)
                 return;
-
-            Game1.activeClickableMenu = new MessengerAppScreen(
+ 
+            var screen = new MessengerAppScreen(
                 iSmartphoneApi,
                 () => iSmartphoneApi.OpenPhoneHomeScreen());
+            this.activeScreen = screen;
+            Game1.activeClickableMenu = screen;
         }
 
         public static void CheckSendNewMessage()

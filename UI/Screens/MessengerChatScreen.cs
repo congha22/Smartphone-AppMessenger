@@ -1608,5 +1608,110 @@ namespace SmartphoneAppMessenger
         {
             DrawChatQuickActionButton(b, bounds, "?", false);
         }
+
+        public void DrawScreenContent(SpriteBatch b, Rectangle content)
+        {
+            float oldScale = this.phoneUiScale;
+            int oldX = this.xPositionOnScreen;
+            int oldY = this.yPositionOnScreen;
+            int oldWidth = this.width;
+            int oldHeight = this.height;
+            int oldPhoneWidth = this.phoneFrameWidth;
+            int oldPhoneHeight = this.phoneFrameHeight;
+            int oldContentOffsetX = this.phoneContentOffsetX;
+            int oldContentOffsetY = this.phoneContentOffsetY;
+            int oldContentWidth = this.contentWidth;
+            int oldContentHeight = this.contentHeight;
+
+            try
+            {
+                this.phoneUiScale = 1f;
+                this.phoneFrameWidth = 700;
+                this.phoneFrameHeight = 1100;
+                this.phoneContentOffsetX = 90;
+                this.phoneContentOffsetY = 166;
+                this.width = this.phoneFrameWidth;
+                this.height = this.phoneFrameHeight;
+
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    this.contentWidth = (int)Math.Round(this.phoneBackgroundTexture.Width * this.phoneUiScale);
+                    this.contentHeight = (int)Math.Round(this.phoneBackgroundTexture.Height * this.phoneUiScale);
+                }
+                else
+                {
+                    this.contentWidth = Math.Max(1, this.phoneFrameWidth - (this.phoneContentOffsetX * 2));
+                    this.contentHeight = Math.Max(1, this.phoneFrameHeight - this.phoneContentOffsetY - ScaleValue(80));
+                }
+
+                this.xPositionOnScreen = -this.phoneContentOffsetX;
+                this.yPositionOnScreen = -this.phoneContentOffsetY;
+
+                this.removeButton = new ClickableTextureComponent(
+                    new Rectangle(0, 0, ScaleValue(32), ScaleValue(52)),
+                    Game1.mouseCursors,
+                    new Rectangle(564, 102, 16, 26),
+                    1.6f * this.phoneUiScale);
+
+                SetupChatInputs();
+                RebuildChatBubbles();
+
+                // Draw background wallpaper
+                Rectangle contentRect = GetContentBounds();
+                if (this.phoneBackgroundTexture != null && !this.phoneBackgroundTexture.IsDisposed)
+                {
+                    b.Draw(this.phoneBackgroundTexture, contentRect, Color.White);
+                }
+                else
+                {
+                    b.Draw(Game1.staminaRect, contentRect, new Color(30, 30, 30));
+                }
+
+                DrawContent(b, contentRect);
+
+                // Draw Header on top
+                SpriteFont font = Game1.dialogueFont;
+                float textScale = 1.0f * this.phoneUiScale;
+                Vector2 textPos = new Vector2(
+                    this.xPositionOnScreen + this.phoneContentOffsetX + ScaleValue(65),
+                    this.yPositionOnScreen + this.phoneContentOffsetY + ScaleValue(-45));
+
+                NPC? headerNpc = Game1.getCharacterFromName(this.npcName);
+                string headerDisplayName = headerNpc?.displayName ?? this.npcName;
+                b.DrawString(font, headerDisplayName, textPos, Color.Black, 0f, Vector2.Zero, textScale, SpriteEffects.None, 1f);
+
+                this.removeButton.bounds.X = this.xPositionOnScreen + this.phoneContentOffsetX + ScaleValue(295);
+                this.removeButton.bounds.Y = this.yPositionOnScreen + this.phoneContentOffsetY + ScaleValue(-47);
+                this.removeButton.draw(b, Color.White * 0.8f, 1f);
+
+                if (this.chatPhotoPickerOpen)
+                {
+                    DrawChatPhotoPickerMenu(b);
+                }
+            }
+            finally
+            {
+                this.phoneUiScale = oldScale;
+                this.xPositionOnScreen = oldX;
+                this.yPositionOnScreen = oldY;
+                this.width = oldWidth;
+                this.height = oldHeight;
+                this.phoneFrameWidth = oldPhoneWidth;
+                this.phoneFrameHeight = oldPhoneHeight;
+                this.phoneContentOffsetX = oldContentOffsetX;
+                this.phoneContentOffsetY = oldContentOffsetY;
+                this.contentWidth = oldContentWidth;
+                this.contentHeight = oldContentHeight;
+
+                this.removeButton = new ClickableTextureComponent(
+                    new Rectangle(0, 0, ScaleValue(32), ScaleValue(52)),
+                    Game1.mouseCursors,
+                    new Rectangle(564, 102, 16, 26),
+                    1.6f * this.phoneUiScale);
+
+                SetupChatInputs();
+                RebuildChatBubbles();
+            }
+        }
     }
 }
