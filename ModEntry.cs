@@ -231,6 +231,7 @@ namespace SmartphoneAppMessenger
             helper.Events.GameLoop.UpdateTicked += TransferManager.OnUpdateTicked;
             helper.Events.Multiplayer.ModMessageReceived += TransferManager.OnModMessageReceived;
             helper.Events.Multiplayer.PeerConnected += TransferManager.OnPeerConnected;
+            helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
 
             var harmony = new Harmony(this.ModManifest.UniqueID);
             harmony.PatchAll();
@@ -239,6 +240,16 @@ namespace SmartphoneAppMessenger
         public override object GetApi()
         {
             return new AppMessengerApi();
+        }
+
+        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
+        {
+            if (!Context.IsWorldReady) return;
+
+            if (Game1.activeClickableMenu is MessengerAppScreen appScreen)
+                this.activeScreen = appScreen;
+            else if (Game1.activeClickableMenu is MessengerChatScreen chatScreen)
+                this.activeScreen = chatScreen;
         }
 
         private void OnTimeChanged(object? sender, TimeChangedEventArgs e)
