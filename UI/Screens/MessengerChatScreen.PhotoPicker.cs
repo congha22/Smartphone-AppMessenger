@@ -118,7 +118,6 @@ namespace SmartphoneAppMessenger
                     .Split("||", StringSplitOptions.RemoveEmptyEntries)
                     .Select(path => path.Trim())
                     .Where(path => !string.IsNullOrWhiteSpace(path))
-                    .Select(path => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? Path.ChangeExtension(path, ".jpg") : path)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 return photoPaths.Count > 0;
@@ -131,7 +130,6 @@ namespace SmartphoneAppMessenger
                     .Split("||", StringSplitOptions.RemoveEmptyEntries)
                     .Select(path => path.Trim())
                     .Where(path => !string.IsNullOrWhiteSpace(path))
-                    .Select(path => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? Path.ChangeExtension(path, ".jpg") : path)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 return photoPaths.Count > 0;
@@ -633,10 +631,13 @@ namespace SmartphoneAppMessenger
                 {
                     string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
                     string playerPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player", resolvedPath);
+                    string importedPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_imported", resolvedPath);
                     string npcPath = Path.Combine(smartphoneDir, "userdata", activeSave, "shared_photo", resolvedPath);
 
                     if (File.Exists(playerPath))
                         resolvedPath = playerPath;
+                    else if (File.Exists(importedPath))
+                        resolvedPath = importedPath;
                     else if (File.Exists(npcPath))
                         resolvedPath = npcPath;
                 }
@@ -648,10 +649,13 @@ namespace SmartphoneAppMessenger
                 string smartphoneDir = Path.Combine(Directory.GetParent(ModEntry.Instance.Helper.DirectoryPath).FullName, "Smartphone");
                 string activeSave = MessageManager.GetActiveSaveFolderName();
                 string playerPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_player", fileName);
+                string importedPath = Path.Combine(smartphoneDir, "userdata", activeSave, "photo_imported", fileName);
                 string npcPath = Path.Combine(smartphoneDir, "userdata", activeSave, "shared_photo", fileName);
 
                 if (File.Exists(playerPath))
                     resolvedPath = playerPath;
+                else if (File.Exists(importedPath))
+                    resolvedPath = importedPath;
                 else if (File.Exists(npcPath))
                     resolvedPath = npcPath;
             }

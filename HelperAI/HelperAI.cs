@@ -551,6 +551,10 @@ namespace SmartphoneAppMessenger
                 ? ModEntry.BuildResponseConversationUserInput(npc, text)
                 : text;
             string system = GetSystemMessage(npc, type, allowToolCalling: !string.Equals(provider, AiProviderCustom, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(system))
+            {
+                system = $"You are roleplaying as NPC {npc.Name} in Stardew Valley, responding to PLAYER {Game1.player.Name}. Keep response under 30 words.";
+            }
 
             // SMonitor.Log(system, LogLevel.Error);
 
@@ -793,10 +797,17 @@ namespace SmartphoneAppMessenger
                                     onConfirm: (Farmer who) =>
                                     {
                                         Game1.activeClickableMenu = null;
-                                        iUnlimitedEventExpansionApi.OpenScheduleEventTimeMenu(
-                                            eventNpcName.Trim(),
-                                            registeredEvent.EventType,
-                                            textResponse);
+                                        try
+                                        {
+                                            iUnlimitedEventExpansionApi?.OpenScheduleEventTimeMenu(
+                                                eventNpcName.Trim(),
+                                                registeredEvent.EventType,
+                                                textResponse);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            SMonitor?.Log($"Failed to open schedule event menu: {ex.Message}", LogLevel.Error);
+                                        }
 
                                     },
                                     onCancel: (Farmer who) =>
@@ -836,7 +847,14 @@ namespace SmartphoneAppMessenger
                             break;
                     }
 
-                    SMonitor.Log($"Unable to receive AI content from {provider}. {statusCode}, {errorMessage}\n\n", LogLevel.Error);
+                    string errorResponse = "";
+                    try
+                    {
+                        errorResponse = await httpResponse.Content.ReadAsStringAsync();
+                    }
+                    catch { }
+
+                    SMonitor.Log($"Unable to receive AI content from {provider}. {statusCode}, {errorMessage}\nError details: {errorResponse}\n\n", LogLevel.Error);
                     // SMonitor.Log(httpResponse.ToString(), LogLevel.Error);
                     return "SYSTEM: ---Got an error---";
                 }
@@ -1038,9 +1056,10 @@ namespace SmartphoneAppMessenger
 
                 return ThemeSwich(type, allowToolCalling, npc, playerProfile, npcCharacteristic, relation, data, summary);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return "";
+                SMonitor.Log($"GetSystemMessage encountered an error: {ex.Message}", LogLevel.Trace);
+                return $"You are roleplaying as NPC {npc.Name} in Stardew Valley, responding to PLAYER {Game1.player.Name}. Keep response under 30 words.";
             }
         }
 
@@ -1461,7 +1480,14 @@ namespace SmartphoneAppMessenger
                             break;
                     }
 
-                    SMonitor.Log($"Unable to receive AI content from {provider}. {statusCode}, {errorMessage}\n\n", LogLevel.Error);
+                    string errorResponse = "";
+                    try
+                    {
+                        errorResponse = await httpResponse.Content.ReadAsStringAsync();
+                    }
+                    catch { }
+
+                    SMonitor.Log($"Unable to receive AI content from {provider}. {statusCode}, {errorMessage}\nError details: {errorResponse}\n\n", LogLevel.Error);
                     return parsedSummaries;
                 }
             }
@@ -1471,68 +1497,75 @@ namespace SmartphoneAppMessenger
         {
             var functionList = new List<object>();
 
-            if (Game1.timeOfDay > 2200 || iUnlimitedEventExpansionApi == null || !iUnlimitedEventExpansionApi.CanScheduleNewEvent())
-                return functionList.ToArray();
-
-            int heartLevel = 0;
-            if (Game1.player.friendshipData.ContainsKey(npc.Name)) heartLevel = (int)Game1.player.friendshipData[npc.Name].Points / 250;
-            var registeredEvents = GetRegisteredUnlimitedEventsForHeartLevel(heartLevel);
-
-            if (registeredEvents.Count > 0)
+            try
             {
-                var allowedEvents = registeredEvents
-                    .Select(evt => evt.EventType)
-                    .ToArray();
+                if (Game1.timeOfDay > 2200 || iUnlimitedEventExpansionApi == null || !iUnlimitedEventExpansionApi.CanScheduleNewEvent())
+                    return functionList.ToArray();
 
-                // Get list of all event only, exclude Birthday for invitation type
-                if (listOnly)
+                int heartLevel = 0;
+                if (Game1.player.friendshipData.ContainsKey(npc.Name)) heartLevel = (int)Game1.player.friendshipData[npc.Name].Points / 250;
+                var registeredEvents = GetRegisteredUnlimitedEventsForHeartLevel(heartLevel);
+
+                if (registeredEvents.Count > 0)
                 {
-                    if (!ignoreBirthdayEvent)
-                        return allowedEvents;
+                    var allowedEvents = registeredEvents
+                        .Select(evt => evt.EventType)
+                        .ToArray();
 
-                    return registeredEvents
-                    .Where(evt => !evt.EventType.Equals("Birthday", StringComparison.OrdinalIgnoreCase))
-                    .Select(evt => evt.EventType)
-                    .ToArray();
-                }
-
-                var extraToolDescriptions = string.Join(
-                    " ",
-                    registeredEvents
-                        .Select(evt => evt.ToolDescription)
-                        .Where(text => !string.IsNullOrWhiteSpace(text))
-                        .Distinct(StringComparer.OrdinalIgnoreCase));
-
-                string scheduleToolDescription = "Schedule an event for NPC and PLAYER, specifying the event type, and NPC response message.";
-                if (!string.IsNullOrWhiteSpace(extraToolDescriptions))
-                    scheduleToolDescription += $" {extraToolDescriptions}";
-
-                functionList.Add(
-                    new
+                    // Get list of all event only, exclude Birthday for invitation type
+                    if (listOnly)
                     {
-                        type = "function",
-                        name = "schedule_event",
-                        description = scheduleToolDescription,
-                        parameters = new
-                        {
-                            type = "object",
-                            properties = new
-                            {
-                                npc = new { type = "string", description = "Name of the NPC" },
-                                event_type = new
-                                {
-                                    type = "string",
-                                    description = "The specific type of event agreed upon.",
-                                    @enum = allowedEvents.ToArray()
-                                },
-                                npc_response = new { type = "string", description = "A message from the NPC to invite or confirm the event" }
-                            },
-                            required = new[] { "npc", "event_type", "npc_response" },
-                            additionalProperties = false
-                        },
-                        strict = true
+                        if (!ignoreBirthdayEvent)
+                            return allowedEvents;
+
+                        return registeredEvents
+                        .Where(evt => !evt.EventType.Equals("Birthday", StringComparison.OrdinalIgnoreCase))
+                        .Select(evt => evt.EventType)
+                        .ToArray();
                     }
-                );
+
+                    var extraToolDescriptions = string.Join(
+                        " ",
+                        registeredEvents
+                            .Select(evt => evt.ToolDescription)
+                            .Where(text => !string.IsNullOrWhiteSpace(text))
+                            .Distinct(StringComparer.OrdinalIgnoreCase));
+
+                    string scheduleToolDescription = "Schedule an event for NPC and PLAYER, specifying the event type, and NPC response message.";
+                    if (!string.IsNullOrWhiteSpace(extraToolDescriptions))
+                        scheduleToolDescription += $" {extraToolDescriptions}";
+
+                    functionList.Add(
+                        new
+                        {
+                            type = "function",
+                            name = "schedule_event",
+                            description = scheduleToolDescription,
+                            parameters = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    npc = new { type = "string", description = "Name of the NPC" },
+                                    event_type = new
+                                    {
+                                        type = "string",
+                                        description = "The specific type of event agreed upon.",
+                                        @enum = allowedEvents.ToArray()
+                                    },
+                                    npc_response = new { type = "string", description = "A message from the NPC to invite or confirm the event" }
+                                },
+                                required = new[] { "npc", "event_type", "npc_response" },
+                                additionalProperties = false
+                            },
+                            strict = true
+                        }
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                SMonitor?.Log($"GetToolList encountered an error: {ex.Message}", LogLevel.Trace);
             }
             return functionList.ToArray();
         }
@@ -1604,13 +1637,16 @@ namespace SmartphoneAppMessenger
                     continue;
                 }
 
-                string name = toolObject["name"]?.ToString()?.Trim() ?? string.Empty;
+                JToken? functionToken = toolObject["function"];
+                JObject targetObject = functionToken is JObject obj ? obj : toolObject;
+
+                string name = targetObject["name"]?.ToString()?.Trim() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(name))
                     continue;
 
-                string description = toolObject["description"]?.ToString()?.Trim() ?? string.Empty;
+                string description = targetObject["description"]?.ToString()?.Trim() ?? string.Empty;
 
-                JToken schema = toolObject["parameters"]?.DeepClone() ?? new JObject { ["type"] = "OBJECT" };
+                JToken schema = targetObject["parameters"]?.DeepClone() ?? new JObject { ["type"] = "OBJECT" };
                 schema = ConvertJsonSchemaTypeValuesToGemini(schema);
 
                 var declaration = new JObject
