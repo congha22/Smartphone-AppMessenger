@@ -15,12 +15,13 @@ namespace SmartphoneAppMessenger
 
             string[] aiModelValues =
             {
+                ModConfig.OpenAIModel_56luna,
                 ModConfig.OpenAIModel_51,
                 ModConfig.OpenAIModel_5mini,
                 ModConfig.OpenAIModel_5nano,
                 ModConfig.OpenAIModel_54mini,
                 ModConfig.OpenAIModel_54nano,
-                ModConfig.GeminiModel_35Flash,
+                ModConfig.GeminiModel_37Flash,
                 ModConfig.GeminiModel_31FlashLite,
                 ModConfig.GeminiModel_3FlashPreview
             };
@@ -180,7 +181,7 @@ namespace SmartphoneAppMessenger
                 mod: ModManifest,
                 name: () => GetTranslation("config.model.name"),
                 tooltip: () => GetTranslation("config.model.tooltip"),
-                getValue: () => EnsureAllowedValue(Config.Model, ModConfig.OpenAIModel_54mini, aiModelValues),
+                getValue: () => EnsureAllowedValue(Config.Model, ModConfig.OpenAIModel_56luna, aiModelValues),
                 setValue: value => Config.Model = value,
                 allowedValues: aiModelValues
             );

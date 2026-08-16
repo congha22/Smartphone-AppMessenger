@@ -46,12 +46,12 @@ namespace SmartphoneAppMessenger
 
         // gpt-5.4 variant support reasoning effor: none, low, medium, high, xhigh
         // gpt-5 variant support reasoning effort: minimal, low, medium, high
-        public static string chatModel = "gpt-5.4-mini";
-        public static object chatReasoningEffort = new { effort = "none" };
+        public static string chatModel = "gpt-5.6-luna";
+        public static object chatReasoningEffort = new { effort = "low" };
         public static string chatGeminiThinkingLevel = GeminiThinkingLevelMinimal;
 
 
-        public static string summaryModel = "gpt-5.4-mini";
+        public static string summaryModel = "gpt-5.6-luna";
         public static object summaryReasoningEffort = new { effort = "low" };
         public static string summaryGeminiThinkingLevel = GeminiThinkingLevelMinimal;
 
@@ -381,7 +381,7 @@ namespace SmartphoneAppMessenger
                 {
                     chatGeminiThinkingLevel = GeminiThinkingLevelMinimal;
                     summaryGeminiThinkingLevel = GeminiThinkingLevelMinimal;
-                    chatReasoningEffort = new { effort = "none" };
+                    chatReasoningEffort = new { effort = "low" };
                     summaryReasoningEffort = new { effort = "none" };
                     IsReducedQuality = false;
                     IsMaxedLimit = false;
@@ -391,6 +391,10 @@ namespace SmartphoneAppMessenger
 
                 switch (chatModel)
                 {
+                    case ModConfig.OpenAIModel_56luna:
+                        chatReasoningEffort = new { effort = "low" };
+                        summaryReasoningEffort = new { effort = "low" };
+                        break;
                     case ModConfig.OpenAIModel_51:
                         chatReasoningEffort = new { effort = "none" };
                         summaryReasoningEffort = new { effort = "none" };
@@ -412,8 +416,8 @@ namespace SmartphoneAppMessenger
                         summaryReasoningEffort = new { effort = "none" };
                         break;
                     default:
-                        chatReasoningEffort = new { effort = "minimal" };
-                        summaryReasoningEffort = new { effort = "minimal" };
+                        chatReasoningEffort = new { effort = "low" };
+                        summaryReasoningEffort = new { effort = "low" };
                         break;
                 }
                 return;
@@ -458,23 +462,14 @@ namespace SmartphoneAppMessenger
 
                         iSmartphoneApi?.SendSmartphoneNotification(ModEntry.GetTranslation("notification.usage-high-downgrade"));
                     }
-                    else if (regular > 10000000)
-                    {
-                        IsReducedQuality = false;
-                        chatModel = "gpt-5-mini";
-                        chatReasoningEffort = new { effort = "minimal" };
-
-                        summaryModel = "gpt-5-mini";
-                        summaryReasoningEffort = new { effort = "minimal" };
-                    }
                     else
                     {
                         IsReducedQuality = false;
-                        chatModel = "gpt-5.4-mini";
-                        chatReasoningEffort = new { effort = "none" };
+                        chatModel = "gpt-5.6-luna";
+                        chatReasoningEffort = new { effort = "low" };
 
-                        summaryModel = "gpt-5.4-mini";
-                        summaryReasoningEffort = new { effort = "none" };
+                        summaryModel = "gpt-5.6-luna";
+                        summaryReasoningEffort = new { effort = "low" };
                     }
                 });
             }
@@ -678,7 +673,7 @@ namespace SmartphoneAppMessenger
                                 }
                             }
                         },
-                        { "text", new { format = new { type = "text" }, verbosity = "low" } },
+                        { "text", new { format = new { type = "text" }, verbosity = "medium" } },
                         { "reasoning", chatReasoningEffort }
                     };
 
@@ -2059,9 +2054,24 @@ namespace SmartphoneAppMessenger
 
         public static async Task<(int, int)> GetOpenAIUsage()
         {
-            List<string> premiumModels = new List<string> { "gpt-5.4", "gpt-5.2", "gpt-5.1", "gpt-5.1-codex", "gpt-5", "gpt-5-codex", "gpt-5-chat-latest", "gpt-4.1", "gpt-4o", "o1", "o3" };
-            List<string> regularModels = new List<string> { "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.1-codex-mini", "gpt-5-mini", "gpt-5-nano", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o-mini",
-                                                            "o1-mini", "o3-mini", "o4-mini", "codex-mini-latest" };
+            List<string> premiumModels = new List<string>
+            {
+                "gpt-5.6-sol", "gpt-5.5-2026-04-23", "gpt-5.5", "gpt-5.4-2026-03-05", "gpt-5.4",
+                "gpt-5.2-2025-12-11", "gpt-5.2", "gpt-5.1-2025-11-13", "gpt-5.1", "gpt-5.1-codex",
+                "gpt-5-codex", "gpt-5-2025-08-07", "gpt-5", "gpt-5-chat-latest",
+                "gpt-4.5-preview-2025-02-27", "gpt-4.5", "gpt-4.1-2025-04-14", "gpt-4.1",
+                "gpt-4o-2024-05-13", "gpt-4o-2024-08-06", "gpt-4o-2024-11-20", "gpt-4o",
+                "o3-2025-04-16", "o3", "o1-preview-2024-09-12", "o1-2024-12-17", "o1"
+            };
+            List<string> regularModels = new List<string>
+            {
+                "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.4-mini-2026-03-17", "gpt-5.4-mini",
+                "gpt-5.4-nano-2026-03-17", "gpt-5.4-nano", "gpt-5.1-codex-mini",
+                "gpt-5-mini-2025-08-07", "gpt-5-mini", "gpt-5-nano-2025-08-07", "gpt-5-nano",
+                "gpt-4.1-mini-2025-04-14", "gpt-4.1-mini", "gpt-4.1-nano-2025-04-14", "gpt-4.1-nano",
+                "gpt-4o-mini-2024-07-18", "gpt-4o-mini", "o4-mini-2025-04-16", "o4-mini", "o3-mini",
+                "o1-mini-2024-09-12", "o1-mini", "codex-mini-latest"
+            };
             string admin_key = ResolveOpenAiAdminKey();
             if (string.IsNullOrWhiteSpace(admin_key))
                 return (-1, -1);

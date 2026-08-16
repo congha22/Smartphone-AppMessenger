@@ -44,6 +44,7 @@ namespace SmartphoneAppMessenger
                 AiCallsRemainingToday = AiCreditRemaining;
                 DailyAiUsageRemainingToday = DailyAiLimit;
                 SuccessfulAiCallsToday = 0;
+                IsAiDisabledForPhoneInactivityToday = false;
             }
         }
 

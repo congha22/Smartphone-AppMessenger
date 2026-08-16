@@ -286,6 +286,8 @@ namespace SmartphoneAppMessenger
 
             MessageManager.LoadHistory(this.Helper);
             PhoneDialogueRuntime.ClearDailyState();
+            ResetDailyAiUsageLimit();
+            ClearQueuedAiActions();
 
             HandleAiModelSettingTimeChanged(600);
             HandleAiUsageTimeChanged(600);
@@ -402,6 +404,9 @@ namespace SmartphoneAppMessenger
         {
             lastTimeReceiveMessage = 600;
             isTodayEventAdded = false;
+            ResetDailyAiUsageLimit();
+            ClearQueuedAiActions();
+            PhoneDialogueRuntime.ClearDailyState();
             try
             {
                 MessengerChatScreen.ClearChatImageCache();
